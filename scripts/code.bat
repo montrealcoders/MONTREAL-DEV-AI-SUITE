@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-title DEV-IA Suite
+title DEV-AI Suite
 
 pushd %~dp0\..
 
