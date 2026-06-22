@@ -197,9 +197,9 @@
 	],
 	"onboardingThemes": [
 		{
-			"id": "dark-2026",
-			"label": "Dark 2026",
-			"themeId": "Dark 2026",
+			"id": "devai-dark",
+			"label": "DEV-AI Dark",
+			"themeId": "devai-dark",
 			"type": "dark"
 		},
 		{
