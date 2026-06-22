@@ -53,6 +53,33 @@ if (args['sandbox'] &&
 	app.commandLine.appendSwitch('disable-gpu-sandbox');
 }
 
+// Set app name before app 'ready' event to ensure correct display in taskbar/dock
+app.setName('DEV-AI Suite');
+// On Linux/Wayland create a user-local .desktop entry so GNOME dock shows the correct icon
+if (process.platform === 'linux') {
+	try {
+		const desktopDir = path.join(os.homedir(), '.local', 'share', 'applications');
+		fs.mkdirSync(desktopDir, { recursive: true });
+		const iconPath = path.join(import.meta.dirname, '..', 'logo-linux.png');
+		const desktopContent = [
+			'[Desktop Entry]',
+			'Name=DEV-AI Suite',
+			'Comment=Editing evolved',
+			`Exec=${process.execPath} %F`,
+			`Icon=${iconPath}`,
+			'Type=Application',
+			'StartupNotify=false',
+			'StartupWMClass=DEV-AI Suite',
+			'Categories=TextEditor;Development;IDE;',
+			''
+		].join('\n');
+		fs.writeFileSync(path.join(desktopDir, 'dev-ai-suite.desktop'), desktopContent, 'utf8');
+		if (typeof (app as unknown as { setDesktopName?: (n: string) => void }).setDesktopName === 'function') {
+			(app as unknown as { setDesktopName: (n: string) => void }).setDesktopName('dev-ai-suite.desktop');
+		}
+	} catch (_e) { /* ignore */ }
+}
+
 // Set userData path before app 'ready' event
 const userDataPath = getUserDataPath(args, product.nameShort ?? 'code-oss-dev');
 if (process.platform === 'win32') {
