@@ -9,7 +9,7 @@ import * as os from 'node:os';
 import { performance } from 'node:perf_hooks';
 import { configurePortable } from './bootstrap-node.js';
 import { bootstrapESM } from './bootstrap-esm.js';
-import { app, protocol, crashReporter, Menu, contentTracing } from 'electron';
+import { app, protocol, crashReporter, Menu, contentTracing, BrowserWindow } from 'electron';
 import minimist from 'minimist';
 import { product } from './bootstrap-meta.js';
 import { parse } from './vs/base/common/jsonc.js';
@@ -55,16 +55,24 @@ if (args['sandbox'] &&
 
 // Set app name before app 'ready' event to ensure correct display in taskbar/dock
 app.setName('DEV-AI Suite');
+// On Linux, clear inherited launcher env vars so GNOME doesn't group this window
+// under the parent process's dock icon (e.g. when launched from VS Code terminal).
+if (process.platform === 'linux') {
+	delete process.env['GIO_LAUNCHED_DESKTOP_FILE'];
+	delete process.env['GIO_LAUNCHED_DESKTOP_FILE_PID'];
+	delete process.env['DESKTOP_STARTUP_ID'];
+}
 // On Linux/Wayland create a user-local .desktop entry so GNOME dock shows the correct icon
 if (process.platform === 'linux') {
 	try {
 		const desktopDir = path.join(os.homedir(), '.local', 'share', 'applications');
 		fs.mkdirSync(desktopDir, { recursive: true });
-		const iconPath = path.join(import.meta.dirname, '..', 'logo-linux.png');
+		const devIconPath = path.join(import.meta.dirname, '..', 'resources', 'linux', 'icons', '512x512', 'apps', `${product.linuxIconName ?? 'devai-suite'}.png`);
+		const iconPath = fs.existsSync(devIconPath) ? devIconPath : (product.linuxIconName ?? 'devai-suite');
 		const desktopContent = [
 			'[Desktop Entry]',
 			'Name=DEV-AI Suite',
-			'Comment=Editing evolved',
+			'Comment=AI-Powered Development Environment',
 			`Exec=${process.execPath} %F`,
 			`Icon=${iconPath}`,
 			'Type=Application',
@@ -178,6 +186,60 @@ if (process.platform === 'win32' || process.platform === 'linux') {
 	app.commandLine.appendSwitch('lang', electronLocale);
 }
 
+// Splash screen shown during startup on Linux
+let splashWindow: BrowserWindow | undefined = undefined;
+
+function showSplashScreen(): void {
+	const isCLIMode = args['list-extensions'] || args['install-extension'] || args['uninstall-extension'];
+	if (isCLIMode) {
+		return;
+	}
+
+	const version = (product as unknown as { version?: string }).version ?? '';
+	const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>*{margin:0;padding:0;box-sizing:border-box}body{width:480px;height:280px;background:#0d1117;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#e6edf3;user-select:none;overflow:hidden}.logo{font-size:42px;font-weight:700;letter-spacing:-1px;color:#58a6ff;margin-bottom:6px}.logo span{color:#e6edf3}.subtitle{font-size:13px;color:#8b949e;margin-bottom:36px}.version{font-size:11px;color:#484f58;position:absolute;bottom:16px;right:16px}.brand{font-size:11px;color:#484f58;position:absolute;bottom:16px;left:16px}.dots{display:flex;gap:6px}.dot{width:6px;height:6px;border-radius:50%;background:#58a6ff;animation:pulse 1.4s ease-in-out infinite}.dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}@keyframes pulse{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}</style></head><body><div class="logo">DEV-AI <span>Suite</span></div><div class="subtitle">AI-Powered Development Environment</div><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><div class="brand">Montreal Informatica</div>${version ? `<div class="version">v${version}</div>` : ''}</body></html>`;
+
+	const splash = new BrowserWindow({
+		width: 480,
+		height: 280,
+		frame: false,
+		resizable: false,
+		center: true,
+		skipTaskbar: true,
+		backgroundColor: '#0d1117',
+		show: false,
+		webPreferences: {
+			nodeIntegration: false,
+			contextIsolation: true,
+			devTools: false
+		}
+	});
+
+	splash.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+	splash.once('ready-to-show', () => {
+		if (!splash.isDestroyed()) {
+			splash.show();
+		}
+	});
+	splash.on('closed', () => { splashWindow = undefined; });
+	splashWindow = splash;
+
+	let splashClosed = false;
+	const closeSplash = () => {
+		if (splashClosed || !splashWindow || splashWindow.isDestroyed()) { return; }
+		splashClosed = true;
+		splashWindow.close();
+		splashWindow = undefined;
+	};
+
+	// Close splash when the main workbench window is ready to show
+	app.once('browser-window-created', (_event, win) => {
+		win.once('ready-to-show', closeSplash);
+	});
+
+	// Fallback: close after 8 seconds regardless
+	setTimeout(closeSplash, 8000);
+}
+
 // Load our code once ready
 app.once('ready', function () {
 	if (args['trace']) {
@@ -219,6 +281,10 @@ app.once('ready', function () {
 
 async function onReady() {
 	perf.mark('code/mainAppReady');
+
+	if (process.platform === 'linux') {
+		showSplashScreen();
+	}
 
 	try {
 		const [, nlsConfig] = await Promise.all([
