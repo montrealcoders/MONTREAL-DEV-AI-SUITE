@@ -245,6 +245,7 @@ const commonResourcePatterns = [
 
 	// SVGs referenced from CSS (needed for transpile/dev builds where CSS is copied as-is)
 	'vs/workbench/browser/media/code-icon.svg',
+	'vs/workbench/browser/media/app-brand-icon.svg',
 	'vs/workbench/browser/parts/editor/media/letterpress*.svg',
 	'vs/sessions/contrib/chat/browser/media/*.svg',
 	'vs/sessions/contrib/welcome/browser/media/themePreviews/*.svg'
