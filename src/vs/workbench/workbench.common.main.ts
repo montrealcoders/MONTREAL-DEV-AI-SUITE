@@ -391,6 +391,9 @@ import './contrib/welcomeViews/common/newFile.contribution.js';
 // Welcome Onboarding
 import './contrib/welcomeOnboarding/browser/welcomeOnboarding.contribution.js';
 
+// Welcome Profile Selection
+import './contrib/welcomeProfileSelection/browser/profileSelection.contribution.js';
+
 // Call Hierarchy
 import './contrib/callHierarchy/browser/callHierarchy.contribution.js';
 

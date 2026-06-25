@@ -5,7 +5,7 @@
 
 import { Emitter, Event } from '../../../../base/common/event.js';
 import { Disposable } from '../../../../base/common/lifecycle.js';
-import { $ } from '../../../../base/browser/dom.js';
+import { $, addDisposableListener } from '../../../../base/browser/dom.js';
 import { IProfileCardData, ProfileId } from '../common/profileSelectionTypes.js';
 
 export class ProfileCardComponent extends Disposable {
@@ -14,7 +14,6 @@ export class ProfileCardComponent extends Disposable {
 	readonly onDidSelect: Event<ProfileId> = this._onDidSelect.event;
 
 	private readonly _element: HTMLElement;
-	private _selected: boolean = false;
 
 	constructor(private readonly data: IProfileCardData) {
 		super();
@@ -26,7 +25,6 @@ export class ProfileCardComponent extends Disposable {
 	}
 
 	setSelected(selected: boolean): void {
-		this._selected = selected;
 		this._element.classList.toggle('profile-card--selected', selected);
 		this._element.setAttribute('aria-selected', String(selected));
 	}
@@ -67,15 +65,13 @@ export class ProfileCardComponent extends Disposable {
 		card.appendChild(iconWrap);
 		card.appendChild(body);
 
-		this._register({ dispose: () => { } });
-
-		card.addEventListener('click', () => this._select());
-		card.addEventListener('keydown', e => {
+		this._register(addDisposableListener(card, 'click', () => this._select()));
+		this._register(addDisposableListener(card, 'keydown', (e: KeyboardEvent) => {
 			if (e.key === 'Enter' || e.key === ' ') {
 				e.preventDefault();
 				this._select();
 			}
-		});
+		}));
 
 		return card;
 	}
