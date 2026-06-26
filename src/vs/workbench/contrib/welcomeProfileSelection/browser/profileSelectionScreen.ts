@@ -7,9 +7,9 @@ import { Disposable } from '../../../../base/common/lifecycle.js';
 import { $, addDisposableListener, append } from '../../../../base/browser/dom.js';
 import { mainWindow } from '../../../../base/browser/window.js';
 import { ILayoutService } from '../../../../platform/layout/browser/layoutService.js';
+import { IProfileSelectionService, ProfileId } from '../../../services/profileSelection/common/profileSelectionService.js';
 import { ProfileCardComponent } from './profileSelection.js';
-import { IProfileCardData, ProfileId, PROFILE_STORAGE_KEY } from '../common/profileSelectionTypes.js';
-import { IStorageService, StorageScope, StorageTarget } from '../../../../platform/storage/common/storage.js';
+import { IProfileCardData } from '../common/profileSelectionTypes.js';
 import { localize } from '../../../../nls.js';
 
 const UXUI_PROFILE: IProfileCardData = {
@@ -93,26 +93,25 @@ const QA_PROFILE: IProfileCardData = {
 
 const ALL_PROFILES: readonly IProfileCardData[] = [UXUI_PROFILE, PO_PROFILE, ARQUITETO_PROFILE, DEV_PROFILE, QA_PROFILE];
 
-// Prevents multiple simultaneous instances of the screen.
-let _isScreenOpen = false;
-
 export class ProfileSelectionScreen extends Disposable {
+
+	private static _isOpen = false;
 
 	private _overlay: HTMLElement | undefined;
 	private readonly _cards = new Map<ProfileId, ProfileCardComponent>();
 
 	constructor(
 		@ILayoutService private readonly layoutService: ILayoutService,
-		@IStorageService private readonly storageService: IStorageService,
+		@IProfileSelectionService private readonly profileSelectionService: IProfileSelectionService,
 	) {
 		super();
 	}
 
 	show(): void {
-		if (_isScreenOpen || this._overlay) {
+		if (ProfileSelectionScreen._isOpen || this._overlay) {
 			return;
 		}
-		_isScreenOpen = true;
+		ProfileSelectionScreen._isOpen = true;
 
 		const container = this.layoutService.mainContainer;
 
@@ -144,6 +143,11 @@ export class ProfileSelectionScreen extends Disposable {
 			}));
 		}
 
+		const currentProfile = this.profileSelectionService.currentProfile;
+		if (currentProfile) {
+			this._cards.get(currentProfile)?.setSelected(true);
+		}
+
 		// Trap Tab/Shift+Tab at document level so no element needs initial focus.
 		this._register(addDisposableListener(mainWindow.document, 'keydown', (e: KeyboardEvent) => {
 			if (e.key !== 'Tab') {
@@ -166,12 +170,12 @@ export class ProfileSelectionScreen extends Disposable {
 	}
 
 	private _onProfileSelected(id: ProfileId): void {
-		this.storageService.store(PROFILE_STORAGE_KEY, id, StorageScope.APPLICATION, StorageTarget.USER);
+		this.profileSelectionService.setProfile(id);
 		this.dispose();
 	}
 
 	private _hide(): void {
-		_isScreenOpen = false;
+		ProfileSelectionScreen._isOpen = false;
 		this._overlay?.remove();
 		this._overlay = undefined;
 		this._cards.clear();
