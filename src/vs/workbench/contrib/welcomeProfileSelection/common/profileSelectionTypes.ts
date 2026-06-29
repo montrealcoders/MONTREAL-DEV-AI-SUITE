@@ -3,13 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-export const enum ProfileId {
-	UXUI = 'uxui',
-	PO = 'po',
-	ARQUITETO = 'arquiteto',
-	DEV = 'dev',
-	QA = 'qa'
-}
+import { ProfileId } from '../../../services/profileSelection/common/profileSelectionService.js';
+
+export { ProfileId };
 
 export interface IProfileCardData {
 	readonly id: ProfileId;
@@ -19,5 +15,3 @@ export interface IProfileCardData {
 	readonly features: readonly string[];
 	readonly tag: string;
 }
-
-export const PROFILE_STORAGE_KEY = 'devai.selectedProfile';
