@@ -24,6 +24,17 @@ const commit = getVersion(root);
 
 const linuxPackageRevision = Math.floor(new Date().getTime() / 1000);
 
+const HICOLOR_SIZES = ['16', '32', '48', '64', '128', '256', '512'];
+
+function getHicolorIcons(pathPrefix: string) {
+	return es.merge(
+		...HICOLOR_SIZES.map(size =>
+			gulp.src(`resources/linux/icons/${product.linuxIconName}-${size}.png`, { base: 'resources/linux/icons' })
+				.pipe(rename(`${pathPrefix}usr/share/icons/hicolor/${size}x${size}/apps/${product.linuxIconName}.png`))
+		)
+	);
+}
+
 function getDebPackageArch(arch: string): string {
 	switch (arch) {
 		case 'x64': return 'amd64';
@@ -69,6 +80,8 @@ function prepareDebPackage(arch: string) {
 		const icon = gulp.src('resources/linux/code.png', { base: '.' })
 			.pipe(rename('usr/share/pixmaps/' + product.linuxIconName + '.png'));
 
+		const hicolorIcons = getHicolorIcons('');
+
 		const bash_completion = gulp.src('resources/completions/bash/code')
 			.pipe(replace('@@APPNAME@@', product.applicationName))
 			.pipe(rename('usr/share/bash-completion/completions/' + product.applicationName));
@@ -113,7 +126,7 @@ function prepareDebPackage(arch: string) {
 			.pipe(replace('@@NAME@@', product.applicationName))
 			.pipe(rename('DEBIAN/templates'));
 
-		const all = es.merge(control, templates, postinst, postrm, prerm, desktops, appdata, workspaceMime, icon, bash_completion, zsh_completion, code);
+		const all = es.merge(control, templates, postinst, postrm, prerm, desktops, appdata, workspaceMime, icon, hicolorIcons, bash_completion, zsh_completion, code);
 
 		return all.pipe(vfs.dest(destination));
 	};
@@ -179,6 +192,8 @@ function prepareRpmPackage(arch: string) {
 		const icon = gulp.src('resources/linux/code.png', { base: '.' })
 			.pipe(rename('BUILD/usr/share/pixmaps/' + product.linuxIconName + '.png'));
 
+		const hicolorIcons = getHicolorIcons('BUILD/');
+
 		const bash_completion = gulp.src('resources/completions/bash/code')
 			.pipe(replace('@@APPNAME@@', product.applicationName))
 			.pipe(rename('BUILD/usr/share/bash-completion/completions/' + product.applicationName));
@@ -208,7 +223,7 @@ function prepareRpmPackage(arch: string) {
 		const specIcon = gulp.src('resources/linux/rpm/code.xpm', { base: '.' })
 			.pipe(rename('SOURCES/' + product.applicationName + '.xpm'));
 
-		const all = es.merge(code, desktops, appdata, workspaceMime, icon, bash_completion, zsh_completion, spec, specIcon);
+		const all = es.merge(code, desktops, appdata, workspaceMime, icon, hicolorIcons, bash_completion, zsh_completion, spec, specIcon);
 
 		return all.pipe(vfs.dest(getRpmBuildPath(rpmArch)));
 	};
@@ -256,6 +271,8 @@ function prepareSnapPackage(arch: string) {
 		const icon = gulp.src('resources/linux/code.png', { base: '.' })
 			.pipe(rename(`snap/gui/${product.linuxIconName}.png`));
 
+		const hicolorIcons = getHicolorIcons('');
+
 		const code = gulp.src(binaryDir + '/**/*', { base: binaryDir })
 			.pipe(rename(function (p) { p.dirname = `usr/share/${product.applicationName}/${p.dirname}`; }));
 
@@ -269,7 +286,7 @@ function prepareSnapPackage(arch: string) {
 		const electronLaunch = gulp.src('resources/linux/snap/electron-launch', { base: '.' })
 			.pipe(rename('electron-launch'));
 
-		const all = es.merge(desktops, icon, code, snapcraft, electronLaunch);
+		const all = es.merge(desktops, icon, hicolorIcons, code, snapcraft, electronLaunch);
 
 		return all.pipe(vfs.dest(destination));
 	};

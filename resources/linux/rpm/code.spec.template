@@ -33,6 +33,13 @@ mkdir -p %{buildroot}%{_datadir}/applications
 mkdir -p %{buildroot}%{_datadir}/appdata
 mkdir -p %{buildroot}%{_datadir}/mime/packages
 mkdir -p %{buildroot}%{_datadir}/pixmaps
+mkdir -p %{buildroot}%{_datadir}/icons/hicolor/16x16/apps
+mkdir -p %{buildroot}%{_datadir}/icons/hicolor/32x32/apps
+mkdir -p %{buildroot}%{_datadir}/icons/hicolor/48x48/apps
+mkdir -p %{buildroot}%{_datadir}/icons/hicolor/64x64/apps
+mkdir -p %{buildroot}%{_datadir}/icons/hicolor/128x128/apps
+mkdir -p %{buildroot}%{_datadir}/icons/hicolor/256x256/apps
+mkdir -p %{buildroot}%{_datadir}/icons/hicolor/512x512/apps
 mkdir -p %{buildroot}%{_datadir}/bash-completion/completions
 mkdir -p %{buildroot}%{_datadir}/zsh/site-functions
 # Application
@@ -44,6 +51,14 @@ cp -r %{_topdir}/BUILD/usr/share/applications/%{name}-url-handler.desktop %{buil
 cp -r %{_topdir}/BUILD/usr/share/appdata/%{name}.appdata.xml %{buildroot}%{_datadir}/appdata
 cp -r %{_topdir}/BUILD/usr/share/mime/packages/%{name}-workspace.xml %{buildroot}%{_datadir}/mime/packages/%{name}-workspace.xml
 cp -r %{_topdir}/BUILD/usr/share/pixmaps/@@ICON@@.png %{buildroot}%{_datadir}/pixmaps
+# Hicolor icons
+cp -r %{_topdir}/BUILD/usr/share/icons/hicolor/16x16/apps/@@ICON@@.png %{buildroot}%{_datadir}/icons/hicolor/16x16/apps
+cp -r %{_topdir}/BUILD/usr/share/icons/hicolor/32x32/apps/@@ICON@@.png %{buildroot}%{_datadir}/icons/hicolor/32x32/apps
+cp -r %{_topdir}/BUILD/usr/share/icons/hicolor/48x48/apps/@@ICON@@.png %{buildroot}%{_datadir}/icons/hicolor/48x48/apps
+cp -r %{_topdir}/BUILD/usr/share/icons/hicolor/64x64/apps/@@ICON@@.png %{buildroot}%{_datadir}/icons/hicolor/64x64/apps
+cp -r %{_topdir}/BUILD/usr/share/icons/hicolor/128x128/apps/@@ICON@@.png %{buildroot}%{_datadir}/icons/hicolor/128x128/apps
+cp -r %{_topdir}/BUILD/usr/share/icons/hicolor/256x256/apps/@@ICON@@.png %{buildroot}%{_datadir}/icons/hicolor/256x256/apps
+cp -r %{_topdir}/BUILD/usr/share/icons/hicolor/512x512/apps/@@ICON@@.png %{buildroot}%{_datadir}/icons/hicolor/512x512/apps
 # Shell completions
 cp %{_topdir}/BUILD/usr/share/bash-completion/completions/%{name} %{buildroot}%{_datadir}/bash-completion/completions/%{name}
 cp %{_topdir}/BUILD/usr/share/zsh/site-functions/_%{name} %{buildroot}%{_datadir}/zsh/site-functions/_%{name}
@@ -70,12 +85,18 @@ update-desktop-database &> /dev/null || :
 # Update mimetype database to pickup workspace mimetype
 update-mime-database %{_datadir}/mime &> /dev/null || :
 
+# Update icon cache
+gtk-update-icon-cache %{_datadir}/icons/hicolor/ --quiet &> /dev/null || :
+
 %postun
 # Uninstall the desktop entry
 update-desktop-database &> /dev/null || :
 
 # Update mimetype database for removed workspace mimetype
 update-mime-database %{_datadir}/mime &> /dev/null || :
+
+# Update icon cache
+gtk-update-icon-cache %{_datadir}/icons/hicolor/ --quiet &> /dev/null || :
 
 %files
 %defattr(-,root,root)
@@ -88,5 +109,12 @@ update-mime-database %{_datadir}/mime &> /dev/null || :
 %{_datadir}/appdata/%{name}.appdata.xml
 %{_datadir}/mime/packages/%{name}-workspace.xml
 %{_datadir}/pixmaps/@@ICON@@.png
+%{_datadir}/icons/hicolor/16x16/apps/@@ICON@@.png
+%{_datadir}/icons/hicolor/32x32/apps/@@ICON@@.png
+%{_datadir}/icons/hicolor/48x48/apps/@@ICON@@.png
+%{_datadir}/icons/hicolor/64x64/apps/@@ICON@@.png
+%{_datadir}/icons/hicolor/128x128/apps/@@ICON@@.png
+%{_datadir}/icons/hicolor/256x256/apps/@@ICON@@.png
+%{_datadir}/icons/hicolor/512x512/apps/@@ICON@@.png
 %{_datadir}/bash-completion/completions/%{name}
 %{_datadir}/zsh/site-functions/_%{name}
