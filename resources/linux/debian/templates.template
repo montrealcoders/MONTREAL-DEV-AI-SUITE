@@ -1,6 +1,6 @@
-Template: @@NAME@@/add-microsoft-repo
+Template: @@NAME@@/add-devai-repo
 Type: boolean
 Default: true
-Description: Add Microsoft apt repository for Visual Studio Code?
- The installer would like to add the Microsoft repository and signing
- key to update VS Code through apt.
+Description: Add DEV-AI Suite apt repository?
+ The installer would like to add the DEV-AI Suite repository and signing
+ key to update DEV-AI Suite through apt.

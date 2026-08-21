@@ -3,8 +3,8 @@ Version:  @@VERSION@@
 Release:  @@RELEASE@@.el8
 Summary:  AI-Powered Development Suite
 Group:    Development/Tools
-Vendor:   Montreal Informatica
-Packager: DEV-AI Suite Team <devai@montreal.com.br>
+Vendor:   Montreal Informática
+Packager: DEV-AI Suite Team <devai-suite@montreal.com.br>
 License:  @@LICENSE@@
 URL:      https://montreal.com.br/
 Icon:     @@NAME@@.xpm
