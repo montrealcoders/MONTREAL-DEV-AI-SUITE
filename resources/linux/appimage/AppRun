@@ -1,0 +1,5 @@
+#!/bin/bash
+SELF=$(readlink -f "$0")
+HERE="${SELF%/*}"
+export APPDIR="${HERE}"
+exec "${HERE}/usr/share/@@NAME@@/@@NAME@@" "$@"

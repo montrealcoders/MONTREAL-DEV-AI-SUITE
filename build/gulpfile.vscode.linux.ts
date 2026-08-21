@@ -66,8 +66,18 @@ function prepareDebPackage(arch: string) {
 			.pipe(replace('@@NAME@@', product.applicationName))
 			.pipe(rename('usr/share/mime/packages/' + product.applicationName + '-workspace.xml'));
 
-		const icon = gulp.src('resources/linux/code.png', { base: '.' })
+		const icon = gulp.src(`resources/linux/icons/512x512/apps/${product.linuxIconName}.png`, { base: '.' })
 			.pipe(rename('usr/share/pixmaps/' + product.linuxIconName + '.png'));
+
+		const hicolorSizes = ['16x16', '32x32', '48x48', '64x64', '128x128', '256x256', '512x512'];
+		const hicolorIcons = es.merge(
+			...hicolorSizes.map(size =>
+				gulp.src(`resources/linux/icons/${size}/apps/${product.linuxIconName}.png`, { base: '.' })
+					.pipe(rename(`usr/share/icons/hicolor/${size}/apps/${product.linuxIconName}.png`))
+			),
+			gulp.src(`resources/linux/icons/scalable/apps/${product.linuxIconName}.svg`, { base: '.' })
+				.pipe(rename(`usr/share/icons/hicolor/scalable/apps/${product.linuxIconName}.svg`))
+		);
 
 		const bash_completion = gulp.src('resources/completions/bash/code')
 			.pipe(replace('@@APPNAME@@', product.applicationName))
@@ -113,7 +123,7 @@ function prepareDebPackage(arch: string) {
 			.pipe(replace('@@NAME@@', product.applicationName))
 			.pipe(rename('DEBIAN/templates'));
 
-		const all = es.merge(control, templates, postinst, postrm, prerm, desktops, appdata, workspaceMime, icon, bash_completion, zsh_completion, code);
+		const all = es.merge(control, templates, postinst, postrm, prerm, desktops, appdata, workspaceMime, icon, hicolorIcons, bash_completion, zsh_completion, code);
 
 		return all.pipe(vfs.dest(destination));
 	};
@@ -176,8 +186,18 @@ function prepareRpmPackage(arch: string) {
 			.pipe(replace('@@NAME@@', product.applicationName))
 			.pipe(rename('BUILD/usr/share/mime/packages/' + product.applicationName + '-workspace.xml'));
 
-		const icon = gulp.src('resources/linux/code.png', { base: '.' })
+		const icon = gulp.src(`resources/linux/icons/512x512/apps/${product.linuxIconName}.png`, { base: '.' })
 			.pipe(rename('BUILD/usr/share/pixmaps/' + product.linuxIconName + '.png'));
+
+		const hicolorSizesRpm = ['16x16', '32x32', '48x48', '64x64', '128x128', '256x256', '512x512'];
+		const hicolorIconsRpm = es.merge(
+			...hicolorSizesRpm.map(size =>
+				gulp.src(`resources/linux/icons/${size}/apps/${product.linuxIconName}.png`, { base: '.' })
+					.pipe(rename(`BUILD/usr/share/icons/hicolor/${size}/apps/${product.linuxIconName}.png`))
+			),
+			gulp.src(`resources/linux/icons/scalable/apps/${product.linuxIconName}.svg`, { base: '.' })
+				.pipe(rename(`BUILD/usr/share/icons/hicolor/scalable/apps/${product.linuxIconName}.svg`))
+		);
 
 		const bash_completion = gulp.src('resources/completions/bash/code')
 			.pipe(replace('@@APPNAME@@', product.applicationName))
@@ -208,7 +228,7 @@ function prepareRpmPackage(arch: string) {
 		const specIcon = gulp.src('resources/linux/rpm/code.xpm', { base: '.' })
 			.pipe(rename('SOURCES/' + product.applicationName + '.xpm'));
 
-		const all = es.merge(code, desktops, appdata, workspaceMime, icon, bash_completion, zsh_completion, spec, specIcon);
+		const all = es.merge(code, desktops, appdata, workspaceMime, icon, hicolorIconsRpm, bash_completion, zsh_completion, spec, specIcon);
 
 		return all.pipe(vfs.dest(getRpmBuildPath(rpmArch)));
 	};
@@ -253,7 +273,7 @@ function prepareSnapPackage(arch: string) {
 			.pipe(replace('@@URLPROTOCOL@@', product.urlProtocol));
 
 		// An icon that is placed in snap/gui will be placed into meta/gui verbatim.
-		const icon = gulp.src('resources/linux/code.png', { base: '.' })
+		const icon = gulp.src(`resources/linux/icons/512x512/apps/${product.linuxIconName}.png`, { base: '.' })
 			.pipe(rename(`snap/gui/${product.linuxIconName}.png`));
 
 		const code = gulp.src(binaryDir + '/**/*', { base: binaryDir })
@@ -277,7 +297,86 @@ function prepareSnapPackage(arch: string) {
 
 function buildSnapPackage(arch: string) {
 	const cwd = getSnapBuildPath(arch);
-	return () => exec('snapcraft', { cwd });
+	return () => exec('snapcraft --destructive-mode', { cwd });
+}
+
+function getAppImageArch(arch: string): string {
+	switch (arch) {
+		case 'x64': return 'x86_64';
+		case 'arm64': return 'aarch64';
+		case 'armhf': return 'armhf';
+		default: throw new Error(`Unknown arch: ${arch}`);
+	}
+}
+
+function prepareAppImagePackage(arch: string) {
+	const binaryDir = '../VSCode-linux-' + arch;
+	const destination = `.build/linux/appimage/${arch}/${product.applicationName}.AppDir`;
+
+	return function () {
+		// Desktop file at AppDir root (required by AppImage spec)
+		const desktopRoot = gulp.src('resources/linux/code.desktop', { base: '.' })
+			.pipe(rename(product.applicationName + '.desktop'))
+			.pipe(replace('@@NAME_LONG@@', product.nameLong))
+			.pipe(replace('@@NAME_SHORT@@', product.nameShort))
+			.pipe(replace('@@NAME@@', product.applicationName))
+			.pipe(replace('@@EXEC@@', `usr/share/${product.applicationName}/${product.applicationName}`))
+			.pipe(replace('@@ICON@@', product.linuxIconName))
+			.pipe(replace('@@URLPROTOCOL@@', product.urlProtocol));
+
+		// Desktop file also at usr/share/applications/
+		const desktopShare = gulp.src('resources/linux/code.desktop', { base: '.' })
+			.pipe(rename(`usr/share/applications/${product.applicationName}.desktop`))
+			.pipe(replace('@@NAME_LONG@@', product.nameLong))
+			.pipe(replace('@@NAME_SHORT@@', product.nameShort))
+			.pipe(replace('@@NAME@@', product.applicationName))
+			.pipe(replace('@@EXEC@@', `usr/share/${product.applicationName}/${product.applicationName}`))
+			.pipe(replace('@@ICON@@', product.linuxIconName))
+			.pipe(replace('@@URLPROTOCOL@@', product.urlProtocol));
+
+		// AppRun launcher script at AppDir root
+		const appRun = gulp.src('resources/linux/appimage/AppRun', { base: '.' })
+			.pipe(rename('AppRun'))
+			.pipe(replace('@@NAME@@', product.applicationName));
+
+		// 512x512 icon at AppDir root (required by AppImage spec)
+		const iconRoot = gulp.src(`resources/linux/icons/512x512/apps/${product.linuxIconName}.png`, { base: '.' })
+			.pipe(rename(`${product.linuxIconName}.png`));
+
+		// Hicolor icons under usr/share/
+		const hicolorSizes = ['16x16', '32x32', '48x48', '64x64', '128x128', '256x256', '512x512'];
+		const hicolorIcons = es.merge(
+			...hicolorSizes.map(size =>
+				gulp.src(`resources/linux/icons/${size}/apps/${product.linuxIconName}.png`, { base: '.' })
+					.pipe(rename(`usr/share/icons/hicolor/${size}/apps/${product.linuxIconName}.png`))
+			),
+			gulp.src(`resources/linux/icons/scalable/apps/${product.linuxIconName}.svg`, { base: '.' })
+				.pipe(rename(`usr/share/icons/hicolor/scalable/apps/${product.linuxIconName}.svg`))
+		);
+
+		const iconShare = gulp.src(`resources/linux/icons/512x512/apps/${product.linuxIconName}.png`, { base: '.' })
+			.pipe(rename(`usr/share/pixmaps/${product.linuxIconName}.png`));
+
+		// App binary and resources
+		const code = gulp.src(binaryDir + '/**/*', { base: binaryDir })
+			.pipe(rename(function (p) { p.dirname = `usr/share/${product.applicationName}/${p.dirname}`; }));
+
+		const all = es.merge(desktopRoot, desktopShare, appRun, iconRoot, iconShare, hicolorIcons, code);
+		return all.pipe(vfs.dest(destination));
+	};
+}
+
+function buildAppImagePackage(arch: string) {
+	const appImageArch = getAppImageArch(arch);
+	const appDir = `.build/linux/appimage/${arch}/${product.applicationName}.AppDir`;
+	const destination = `.build/linux/appimage/${arch}`;
+	const outputName = `${product.applicationName}-${packageJson.version}-${appImageArch}.AppImage`;
+
+	return async () => {
+		await exec(`chmod +x "${appDir}/AppRun"`);
+		const env = { ...process.env, ARCH: appImageArch };
+		await exec(`appimagetool "${appDir}" "${destination}/${outputName}"`, { env });
+	};
 }
 
 const BUILD_TARGETS = [
@@ -303,4 +402,9 @@ BUILD_TARGETS.forEach(({ arch }) => {
 	task.task(prepareSnapTask);
 	const buildSnapTask = task.define(`vscode-linux-${arch}-build-snap`, task.series(prepareSnapTask, buildSnapPackage(arch)));
 	task.task(buildSnapTask);
+
+	const prepareAppImageTask = task.define(`vscode-linux-${arch}-prepare-appimage`, task.series(rimraf(`.build/linux/appimage/${arch}`), prepareAppImagePackage(arch)));
+	task.task(prepareAppImageTask);
+	const buildAppImageTask = task.define(`vscode-linux-${arch}-build-appimage`, task.series(prepareAppImageTask, buildAppImagePackage(arch)));
+	task.task(buildAppImageTask);
 });

@@ -15,6 +15,11 @@ if hash update-mime-database 2>/dev/null; then
 	update-mime-database /usr/share/mime
 fi
 
+# Update hicolor icon cache
+if hash gtk-update-icon-cache 2>/dev/null; then
+	gtk-update-icon-cache -f /usr/share/icons/hicolor
+fi
+
 RET=true
 if [ -e '/usr/share/debconf/confmodule' ]; then
 	. /usr/share/debconf/confmodule
