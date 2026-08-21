@@ -236,14 +236,21 @@ try {
 		protocol: { name: string; version: number };
 		runtime: { name: string; pin: string };
 		providers: { id: string }[];
+		presets: string[];
 	};
 	assert.equal(init.protocol.name, 'devai-bridge');
 	assert.equal(init.protocol.version, 0);
 	assert.equal(init.runtime.pin, '0.1.1-rc.2');
 	assert.ok(init.providers.some(provider => provider.id === 'deepseek-official'), 'deepseek-official route not advertised');
+	// The product's profile presets are advertised, one per DEV-AI profile.
+	assert.deepEqual([...init.presets].sort(), ['arquiteto', 'dev', 'po', 'qa', 'uxui']);
 
 	// -- create + prompt + approval passthrough -------------------------------
-	const created = await client.request('session/create', { cwd: home }) as { sessionId: string };
+	// An unknown preset fails the create loud instead of silently composing a
+	// default session.
+	await assert.rejects(client.request('session/create', { preset: 'devops' }), /unknown preset: devops/);
+
+	const created = await client.request('session/create', { cwd: home, preset: 'qa' }) as { sessionId: string };
 	assert.ok(created.sessionId.length > 0, 'session/create returned no id');
 	const sid = created.sessionId;
 
@@ -303,24 +310,43 @@ try {
 	// Status transitions streamed too.
 	assert.ok(client.notifications.some(entry => entry.method === 'session/status' && (entry.params as Json).status === 'running'), 'no running session/status observed');
 
+	// The QA preset's persona reached the model: some conversation request of
+	// the first turn carries the persona marker (registered as the agent's
+	// deployment:persona section).
+	const personaMarker = 'perfil QA';
+	const hasPersona = (request: CompletionRequest): boolean => JSON.stringify(request).includes(personaMarker);
+	assert.ok(modelRequests.some(hasPersona), 'no model request carried the QA preset persona');
+
 	// -- list / close / resume -------------------------------------------------
 	await client.request('session/close', { sessionId: sid });
-	const listed = await client.request('session/list') as { sessions: { sessionId: string; live: boolean; cwd?: string }[] };
+	const listed = await client.request('session/list') as { sessions: { sessionId: string; live: boolean; cwd?: string; preset?: string }[] };
 	const row = listed.sessions.find(entry => entry.sessionId === sid);
 	assert.ok(row, 'closed session missing from session/list');
 	assert.equal(row.live, false, 'closed session still reported live');
+	assert.equal(row.preset, 'qa', 'session/list must echo the durable preset meta');
 
 	const resumed = await client.request('session/resume', { sessionId: sid }) as { sessionId: string; events: { type: string; data: Record<string, unknown> }[] };
 	assert.equal(resumed.sessionId, sid);
 	assert.ok(resumed.events.some(event => event.type === 'user/message' && JSON.stringify(event.data).includes('Run the probe.')), 'resumed history is missing the first prompt');
 	assert.ok(resumed.events.some(event => event.type === 'tool/result'), 'resumed history is missing the tool result');
 
-	// A post-resume prompt runs a fresh turn on the restored history.
+	// A post-resume prompt runs a fresh turn on the restored history — and the
+	// resumed agent re-applied the persisted preset persona.
 	const eventCountBefore = client.notifications.filter(entry => entry.method === 'session/event' && isEvent(entry.params, 'turn/end')).length;
+	const modelRequestsBeforeResumeTurn = modelRequests.length;
 	await client.request('session/prompt', { sessionId: sid, content: 'Say done again.' });
 	await client.waitForNotification('post-resume turn/end', (method, params) =>
 		method === 'session/event' && isEvent(params, 'turn/end')
 		&& client.notifications.filter(entry => entry.method === 'session/event' && isEvent(entry.params, 'turn/end')).length > eventCountBefore);
+	// The waiter above also matches error turn-ends, so pin the outcome: the
+	// post-resume turn must have COMPLETED (the resumed agent got the default
+	// provider/model restored) and its model request must carry the persona.
+	const lastTurnEnd = client.notifications
+		.filter(entry => entry.method === 'session/event' && isEvent(entry.params, 'turn/end'))
+		.map(entry => (entry.params as unknown as SessionEventEnvelope).event)
+		.at(-1)!;
+	assert.deepEqual((lastTurnEnd.data as { reason?: { kind?: string } }).reason?.kind, 'completed', `post-resume turn did not complete: ${JSON.stringify(lastTurnEnd.data)}`);
+	assert.ok(modelRequests.slice(modelRequestsBeforeResumeTurn).some(hasPersona), 'the post-resume turn did not carry the re-applied preset persona');
 
 	// -- shutdown ---------------------------------------------------------------
 	await client.request('shutdown');

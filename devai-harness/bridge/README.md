@@ -31,10 +31,10 @@ harness's fail-closed approval seam.
 
 | Method | Params | Result |
 |---|---|---|
-| `initialize` | — | `{ protocol: { name: 'devai-bridge', version: 0 }, runtime: { name: 'dsh', pin: '0.1.1-rc.2' }, providers: [{ id, name }] }`. Waits for the composed plugin tree to settle before answering, so the first session sees every sibling capability. |
-| `session/create` | `{ sessionId?, cwd?, provider?, model? }` | `{ sessionId }`. Creates the session and its driving agent. Unspecified provider/model fall back to the composition's default model selection. |
-| `session/list` | — | `{ sessions: [{ sessionId, createdAt, cwd?, parentSession?, live }] }` from the composed persistence backend; `live` marks sessions currently in the agent registry. |
-| `session/resume` | `{ sessionId }` | `{ sessionId, events }`. Loads the persisted log, resumes a live agent on it, and returns the full replayed event log so the client can render history. Resuming a session this bridge already drives returns the current log. |
+| `initialize` | — | `{ protocol: { name: 'devai-bridge', version: 0 }, runtime: { name: 'dsh', pin: '0.1.1-rc.2' }, providers: [{ id, name }], presets: [id] }`. Waits for the composed plugin tree to settle before answering, so the first session sees every sibling capability. `presets` lists the session preset ids the composition defines (the DEV-AI Suite profiles: `uxui`, `po`, `arquiteto`, `dev`, `qa`). |
+| `session/create` | `{ sessionId?, cwd?, provider?, model?, preset? }` | `{ sessionId }`. Creates the session and its driving agent. Unspecified provider/model fall back to the composition's default model selection. A `preset` must be one of the advertised ids (unknown ids are an error): its persona is registered as the agent's own `deployment:persona` system-prompt section during setup — shadowing the composition default for exactly this session — and the id is recorded as durable session meta. |
+| `session/list` | — | `{ sessions: [{ sessionId, createdAt, cwd?, parentSession?, preset?, live }] }` from the composed persistence backend; `live` marks sessions currently in the agent registry, `preset` echoes the durable preset meta when the session was created with one. |
+| `session/resume` | `{ sessionId }` | `{ sessionId, events }`. Loads the persisted log, resumes a live agent on it, and returns the full replayed event log so the client can render history. The persisted preset's persona is re-applied; a preset the current composition no longer defines degrades to composition defaults with a stderr note. Resuming a session this bridge already drives returns the current log. |
 | `session/prompt` | `{ sessionId, content }` | `{ messageId }`. `content` is a string (one text block) or an array of dsh content blocks. Queues one identified user turn; later activity streams via `session/event` and is not assigned to this request. |
 | `session/interrupt` | `{ sessionId }` | `{}`. Cancels the active turn (cause `user`); the session stays live. |
 | `session/close` | `{ sessionId }` | `{}`. Disposes the live agent without deleting durable data; the session can be resumed later. Unknown ids are a no-op. |
@@ -61,6 +61,23 @@ and preserves the seam's fail-closed stance: a transport failure or an
 unrecognized answer resolves `unavailable`, and a request withdrawn by the
 runtime resolves `cancelled`. The paired `approval/asked` / `approval/decided`
 audit events stream on `session/event` like every other durable fact.
+
+## Session presets
+
+The bridge's plugin config carries `presets`: a map of preset id to
+`{ persona }`. The product's definitions — one preset per DEV-AI Suite
+startup profile — live in `../src/profile-presets.ts` and are passed by the
+bridge-mode boot entry as the overlay entry's config (they cannot live in the
+`devai-harness-bundle` patch because the bridge entry is only inserted by the
+overlay layer, which composes after every bundle patch; as ordinary entry
+config they remain replaceable wholesale by a later patch layer, per dsh
+patch semantics). The IDE side maps the user's selected profile onto the
+`preset` argument of `session/create`
+(`src/vs/platform/agentHost/common/dshSessionPresets.ts`).
+
+A preset today is deliberately just a persona (an agent-scoped
+`deployment:persona` section). Richer per-profile composition (tool posture,
+policies) belongs to dedicated patch layers, not to this wire contract.
 
 ## Layout
 

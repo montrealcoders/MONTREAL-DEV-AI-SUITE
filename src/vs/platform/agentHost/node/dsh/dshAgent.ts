@@ -16,7 +16,10 @@ import { localize } from '../../../../nls.js';
 import { INativeEnvironmentService } from '../../../environment/common/environment.js';
 import { ILogService } from '../../../log/common/log.js';
 import { AgentSession, AgentHostDshHarnessRootEnvVar, DSH_AGENT_PROVIDER_ID, type AgentProvider, type AgentSignal, type IActiveClient, type IAgent, type IAgentChats, type IAgentCreateChatForkSource, type IAgentCreateChatOptions, type IAgentCreateChatResult, type IAgentCreateSessionConfig, type IAgentCreateSessionResult, type IAgentDescriptor, type IAgentMaterializeSessionEvent, type IAgentModelInfo, type IAgentResolveSessionConfigParams, type IAgentSessionConfigCompletionsParams, type IAgentSessionMetadata } from '../../common/agentService.js';
+import { AgentHostDshSelectedProfileConfigKey, platformRootSchema } from '../../common/agentHostSchema.js';
+import { dshSessionPresetForProfile } from '../../common/dshSessionPresets.js';
 import { PendingRequestRegistry } from '../../common/pendingRequestRegistry.js';
+import { IAgentConfigurationService } from '../agentConfigurationService.js';
 import type { ResolveSessionConfigResult, SessionConfigCompletionsResult } from '../../common/state/protocol/commands.js';
 import { ProtectedResourceMetadata, type AgentSelection, type MessageAttachment, type ModelSelection, type ToolDefinition } from '../../common/state/protocol/state.js';
 import { ActionType, isChatAction, type ChatAction, type SessionAction } from '../../common/state/sessionActions.js';
@@ -107,6 +110,7 @@ export class DshAgent extends Disposable implements IAgent {
 	constructor(
 		@ILogService private readonly _logService: ILogService,
 		@INativeEnvironmentService private readonly _environmentService: INativeEnvironmentService,
+		@IAgentConfigurationService private readonly _configurationService: IAgentConfigurationService,
 	) {
 		super();
 	}
@@ -362,9 +366,16 @@ export class DshAgent extends Disposable implements IAgent {
 			await client.request<IDshSessionResumeResult>('session/resume', { sessionId: session.sessionId });
 			session.needsResume = false;
 		} else {
+			// The client-selected DEV-AI Suite profile (forwarded as root
+			// config) picks the session's preset; the preset definitions live
+			// in the harness component and the bridge validates the id. An
+			// unset/unknown profile creates the session on composition
+			// defaults.
+			const preset = dshSessionPresetForProfile(this._configurationService.getRootValue(platformRootSchema, AgentHostDshSelectedProfileConfigKey));
 			await client.request<IDshSessionCreateResult>('session/create', {
 				sessionId: session.sessionId,
 				...(session.workingDirectory?.scheme === 'file' ? { cwd: session.workingDirectory.fsPath } : {}),
+				...(preset === undefined ? {} : { preset }),
 			});
 		}
 		session.materialized = true;

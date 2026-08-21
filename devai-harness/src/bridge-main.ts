@@ -16,9 +16,12 @@
  */
 
 import { bootDevaiHarness } from './boot.ts';
+import { DEVAI_PROFILE_PRESETS } from './profile-presets.ts';
 
 const ctx = await bootDevaiHarness({
-	overlays: [{ insert: [{ id: 'devai-bridge', name: 'devai-bridge' }] }],
+	// The product's profile presets travel as ordinary plugin config; later
+	// patch layers can replace the whole config, per dsh patch semantics.
+	overlays: [{ insert: [{ id: 'devai-bridge', name: 'devai-bridge', config: { presets: DEVAI_PROFILE_PRESETS } }] }],
 });
 
 let exiting = false;

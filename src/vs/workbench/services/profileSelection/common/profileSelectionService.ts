@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Event } from '../../../../base/common/event.js';
+import { DSH_SELECTED_PROFILE_STORAGE_KEY } from '../../../../platform/agentHost/common/dshSessionPresets.js';
 import { createDecorator } from '../../../../platform/instantiation/common/instantiation.js';
 
 export enum ProfileId {
@@ -14,7 +15,14 @@ export enum ProfileId {
 	QA = 'qa'
 }
 
-export const PROFILE_STORAGE_KEY = 'devai.selectedProfile';
+/**
+ * Storage key of the selected profile. The constant itself lives in platform
+ * (`dshSessionPresets.ts`) because the platform agent-host clients read the
+ * same key to forward the selection to the agent host, where DSH sessions map
+ * it onto a preset — and platform cannot import workbench code. Every
+ * `ProfileId` value must have a matching entry in `DSH_SESSION_PRESET_IDS`.
+ */
+export const PROFILE_STORAGE_KEY = DSH_SELECTED_PROFILE_STORAGE_KEY;
 
 export const IProfileSelectionService = createDecorator<IProfileSelectionService>('profileSelectionService');
 

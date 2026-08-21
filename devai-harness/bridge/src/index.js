@@ -32,11 +32,17 @@ import { resolve } from 'node:path';
 import { createUserMessage } from '@deepseek-ai/dsh-llm';
 import { JsonRpcLineTransport } from '@deepseek-ai/dsh-sdk-protocol';
 import { SessionId } from '@deepseek-ai/dsh-session';
+// Imported rather than restated, like @deepseek-ai/dsh-persona does: the
+// prompt registry declares the persona slot a preset shadows, and a drifted
+// copy would land the preset persona BESIDE the deployment's instead of
+// replacing it.
+import { PERSONA_ORDER, PERSONA_SECTION } from '@deepseek-ai/dsh-system-prompt';
 
 export const name = 'devai-bridge';
-// The agent factory and persistence are hard requirements; the optional llm
-// and loader services are read with ctx.get().
-export const inject = ['agents', 'sessionPersistence'];
+// The agent factory, persistence, and the prompt registry (preset personas
+// register agent-scoped sections) are hard requirements; the optional llm and
+// loader services are read with ctx.get().
+export const inject = ['agents', 'sessionPersistence', 'systemPrompt'];
 
 /** Wire version answered by `initialize`. Bump on any breaking wire change. */
 export const BRIDGE_PROTOCOL_VERSION = 0;
@@ -87,10 +93,12 @@ export class DevaiBridgeServer {
 	/**
 	 * @param {import('@deepseek-ai/cordis').Context} ctx plugin context.
 	 * @param {import('@deepseek-ai/dsh-sdk-protocol').JsonRpcLineTransport} transport wire peer.
+	 * @param {Record<string, { persona: string }>} [presets] session presets by id (config-supplied).
 	 */
-	constructor(ctx, transport) {
+	constructor(ctx, transport, presets = {}) {
 		this.ctx = ctx;
 		this.transport = transport;
+		this.presets = presets;
 		/** @type {Map<string, { handle: { agent: any; dispose(): Promise<void> } }>} */
 		this.sessions = new Map();
 		/** @type {(() => void)[]} */
@@ -166,6 +174,36 @@ export class DevaiBridgeServer {
 			protocol: { name: 'devai-bridge', version: BRIDGE_PROTOCOL_VERSION },
 			runtime: { name: 'dsh', pin: BRIDGE_RUNTIME_PIN },
 			providers: llm === undefined ? [] : llm.listProviders().map(entry => ({ id: entry.id, name: entry.name })),
+			presets: Object.keys(this.presets),
+		};
+	}
+
+	/**
+	 * Resolve one preset id against the configured presets, or fail loud —
+	 * a client naming a preset expects the persona to apply, so silently
+	 * creating a default session would misrepresent the session it returns.
+	 * @param {string} preset the requested preset id.
+	 * @returns {{ persona: string }} the preset definition.
+	 */
+	requirePreset(preset) {
+		const found = this.presets[preset];
+		if (found === undefined || typeof found.persona !== 'string' || found.persona.length === 0) {
+			throw new Error(`devai-bridge: unknown preset: ${preset} (configured: ${Object.keys(this.presets).join(', ') || 'none'})`);
+		}
+		return found;
+	}
+
+	/**
+	 * Agent setup registering the preset persona as this agent's own
+	 * `deployment:persona` section — the agent-scoped registration shadows
+	 * the composition's default persona for exactly this session, the same
+	 * mechanism `@deepseek-ai/dsh-persona` and subagent child personas use.
+	 * @param {string} persona the persona prose.
+	 * @returns {(agentCtx: import('@deepseek-ai/cordis').Context) => void} the setup callback.
+	 */
+	personaSetup(persona) {
+		return agentCtx => {
+			agentCtx.systemPrompt.section({ name: PERSONA_SECTION, order: PERSONA_ORDER, text: persona });
 		};
 	}
 
@@ -186,9 +224,19 @@ export class DevaiBridgeServer {
 		const provider = typeof params?.provider === 'string' ? params.provider : defaults?.provider;
 		const model = typeof params?.model === 'string' ? params.model : defaults?.model;
 		const cwd = typeof params?.cwd === 'string' && params.cwd.length > 0 ? resolve(params.cwd) : undefined;
+		// A named preset must exist; its persona composes into the agent's
+		// scoped world during setup (before publication), and the id is
+		// recorded as durable session meta so resume can re-apply it.
+		const preset = typeof params?.preset === 'string' && params.preset.length > 0 ? params.preset : undefined;
+		const personaSetup = preset === undefined ? undefined : this.personaSetup(this.requirePreset(preset).persona);
+		const meta = {
+			...(cwd === undefined ? {} : { cwd }),
+			...(preset === undefined ? {} : { agentPreset: preset }),
+		};
 		const handle = await this.ctx.agents.create({
 			sessionId: SessionId(sessionId),
-			...(cwd === undefined ? {} : { meta: { cwd } }),
+			...(Object.keys(meta).length === 0 ? {} : { meta }),
+			...(personaSetup === undefined ? {} : { setup: personaSetup }),
 			...(provider === undefined && model === undefined ? {} : {
 				agentOptions: {
 					...(provider === undefined ? {} : { provider }),
@@ -213,6 +261,7 @@ export class DevaiBridgeServer {
 				createdAt: header.createdAt,
 				...(header.cwd === undefined ? {} : { cwd: header.cwd }),
 				...(header.parentSession === undefined ? {} : { parentSession: String(header.parentSession) }),
+				...(header.agentPreset === undefined ? {} : { preset: header.agentPreset }),
 				live: this.ctx.agents.get(header.id) !== undefined,
 			})),
 		};
@@ -230,7 +279,37 @@ export class DevaiBridgeServer {
 		const sessionId = requireString(params, 'sessionId');
 		let rec = this.sessions.get(sessionId);
 		if (rec === undefined) {
-			const handle = await this.ctx.agents.resume({ resumeSessionId: SessionId(sessionId) });
+			// Re-apply the persisted preset persona: the durable header names
+			// the preset the session was created with; a preset the current
+			// composition no longer defines degrades to composition defaults
+			// (with a stderr note) rather than bricking the resume.
+			const headers = await this.ctx.sessionPersistence.list();
+			const persistedPreset = headers.find(header => String(header.id) === sessionId)?.agentPreset;
+			let personaSetup;
+			if (persistedPreset !== undefined) {
+				const found = this.presets[persistedPreset];
+				if (found === undefined || typeof found.persona !== 'string' || found.persona.length === 0) {
+					console.error(`devai-bridge: session ${sessionId} was created with preset "${persistedPreset}", which the current composition does not define; resuming without its persona`);
+				} else {
+					personaSetup = this.personaSetup(found.persona);
+				}
+			}
+			// Fill the composition's default model selection exactly like
+			// createSession does: a resumed agent starts from a fresh scoped
+			// world, so without this the next turn fails with "no
+			// provider/model" (previously masked because the contract test's
+			// turn/end waiter also matched error turn-ends).
+			const defaults = this.ctx.get('agentDefaultModel')?.currentSelection();
+			const handle = await this.ctx.agents.resume({
+				resumeSessionId: SessionId(sessionId),
+				...(personaSetup === undefined ? {} : { setup: personaSetup }),
+				...(defaults?.provider === undefined && defaults?.model === undefined ? {} : {
+					agentOptions: {
+						...(defaults?.provider === undefined ? {} : { provider: defaults.provider }),
+						...(defaults?.model === undefined ? {} : { model: defaults.model }),
+					},
+				}),
+			});
 			rec = { handle };
 			this.sessions.set(sessionId, rec);
 		}
@@ -366,7 +445,7 @@ export class DevaiBridgeServer {
  * request additionally flushes the response, disposes the complete root
  * runtime, and exits 0, mirroring the dsh SDK server's contract.
  * @param {import('@deepseek-ai/cordis').Context} ctx plugin context.
- * @param {{ input?: import('node:stream').Readable; output?: import('node:stream').Writable; exit?: (code: number) => void }} [config] runtime-only transport hooks.
+ * @param {{ presets?: Record<string, { persona: string }>; input?: import('node:stream').Readable; output?: import('node:stream').Writable; exit?: (code: number) => void }} [config] session presets plus runtime-only transport hooks.
  */
 export function apply(ctx, config = {}) {
 	const rootFiber = ctx.root.fiber;
@@ -375,7 +454,7 @@ export function apply(ctx, config = {}) {
 	const exit = config.exit ?? ((code) => { process.exit(code); });
 
 	const transport = new JsonRpcLineTransport(input, output);
-	const server = new DevaiBridgeServer(ctx, transport);
+	const server = new DevaiBridgeServer(ctx, transport, config.presets ?? {});
 
 	/** @type {Promise<void> | undefined} */
 	let exitTask;

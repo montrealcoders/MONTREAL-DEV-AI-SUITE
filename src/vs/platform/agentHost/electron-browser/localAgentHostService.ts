@@ -36,7 +36,9 @@ import { AGENT_HOST_CLIENT_BYOK_LM_CHANNEL, AgentHostClientByokLmChannel } from 
 import { AGENT_HOST_CLIENT_PROXY_CHANNEL, AgentHostClientProxyChannel } from '../common/agentHostClientProxyChannel.js';
 import { TELEMETRY_CRASH_REPORTER_SETTING_ID, TELEMETRY_OLD_SETTING_ID, TELEMETRY_SETTING_ID } from '../../telemetry/common/telemetry.js';
 import { getTelemetryLevel } from '../../telemetry/common/telemetryUtils.js';
-import { AgentHostTelemetryLevelConfigKey, AgentHostCodexEnabledConfigKey, AgentHostSessionSyncEnabledConfigKey, AgentHostTerminalAutoApproveEnabledConfigKey, AgentHostGlobalAutoApproveEnabledConfigKey, AgentHostAutoReplyEnabledConfigKey, AgentHostPreferLongContextEnabledConfigKey, AgentHostSystemProxyEnabledConfigKey, AgentHostTerminalAutoApproveRulesConfigKey, getAgentHostTerminalAutoApproveRulesConfig, SESSION_SYNC_ENABLED_SETTING_ID, TERMINAL_AUTO_APPROVE_ENABLED_SETTING_ID, GLOBAL_AUTO_APPROVE_SETTING_ID, AUTO_REPLY_SETTING_ID, PREFER_LONG_CONTEXT_SETTING_ID, TERMINAL_AUTO_APPROVE_SETTING_ID, TERMINAL_IGNORE_DEFAULT_AUTO_APPROVE_RULES_SETTING_ID, telemetryLevelToAgentHostConfigValue } from '../common/agentHostSchema.js';
+import { AgentHostTelemetryLevelConfigKey, AgentHostCodexEnabledConfigKey, AgentHostDshSelectedProfileConfigKey, AgentHostSessionSyncEnabledConfigKey, AgentHostTerminalAutoApproveEnabledConfigKey, AgentHostGlobalAutoApproveEnabledConfigKey, AgentHostAutoReplyEnabledConfigKey, AgentHostPreferLongContextEnabledConfigKey, AgentHostSystemProxyEnabledConfigKey, AgentHostTerminalAutoApproveRulesConfigKey, getAgentHostTerminalAutoApproveRulesConfig, SESSION_SYNC_ENABLED_SETTING_ID, TERMINAL_AUTO_APPROVE_ENABLED_SETTING_ID, GLOBAL_AUTO_APPROVE_SETTING_ID, AUTO_REPLY_SETTING_ID, PREFER_LONG_CONTEXT_SETTING_ID, TERMINAL_AUTO_APPROVE_SETTING_ID, TERMINAL_IGNORE_DEFAULT_AUTO_APPROVE_RULES_SETTING_ID, telemetryLevelToAgentHostConfigValue } from '../common/agentHostSchema.js';
+import { DSH_SELECTED_PROFILE_STORAGE_KEY } from '../common/dshSessionPresets.js';
+import { IStorageService, StorageScope } from '../../storage/common/storage.js';
 
 /**
  * Renderer-side implementation of {@link IAgentHostService} that connects
@@ -100,6 +102,7 @@ export class LocalAgentHostServiceClient extends Disposable implements IAgentHos
 		@IEnvironmentService environmentService: IEnvironmentService,
 		@IInstantiationService private readonly _instantiationService: IInstantiationService,
 		@IAgentHostEnablementService agentHostEnablementService: IAgentHostEnablementService,
+		@IStorageService private readonly _storageService: IStorageService,
 	) {
 		super();
 
@@ -163,6 +166,10 @@ export class LocalAgentHostServiceClient extends Disposable implements IAgentHos
 			}
 		}));
 
+		// The DEV-AI Suite profile selection lives in application-scoped
+		// storage (not a setting), so it gets its own change subscription.
+		this._register(this._storageService.onDidChangeValue(StorageScope.APPLICATION, DSH_SELECTED_PROFILE_STORAGE_KEY, this._store)(() => this._updateDshSelectedProfile()));
+
 		if (agentHostEnablementService.enabled) {
 			this._connect();
 		}
@@ -206,6 +213,7 @@ export class LocalAgentHostServiceClient extends Disposable implements IAgentHos
 		this._updateSystemProxyEnabled();
 		this._updateTerminalAutoApproveRules();
 		this._updateCodexEnabled();
+		this._updateDshSelectedProfile();
 
 		store.add(this._proxy.onDidAction(e => {
 			const revived = revive(e) as ActionEnvelope;
@@ -299,6 +307,16 @@ export class LocalAgentHostServiceClient extends Disposable implements IAgentHos
 		this.dispatchAction(ROOT_STATE_URI, {
 			type: ActionType.RootConfigChanged,
 			config: { [AgentHostCodexEnabledConfigKey]: enabled },
+		}, this.clientId, 0);
+	}
+
+	private _updateDshSelectedProfile(): void {
+		// Forward the raw stored profile; the DSH provider maps it onto a
+		// session preset and treats unknown values as "no preset".
+		const profile = this._storageService.get(DSH_SELECTED_PROFILE_STORAGE_KEY, StorageScope.APPLICATION) ?? '';
+		this.dispatchAction(ROOT_STATE_URI, {
+			type: ActionType.RootConfigChanged,
+			config: { [AgentHostDshSelectedProfileConfigKey]: profile },
 		}, this.clientId, 0);
 	}
 

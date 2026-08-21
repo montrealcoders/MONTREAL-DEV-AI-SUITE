@@ -12,6 +12,7 @@ import { NullLogService } from '../../../../log/common/log.js';
 import type { INativeEnvironmentService } from '../../../../environment/common/environment.js';
 import { AgentHostDshHarnessRootEnvVar, type AgentSignal } from '../../../common/agentService.js';
 import { ActionType, type ChatAction, type SessionAction } from '../../../common/state/sessionActions.js';
+import type { IAgentConfigurationService } from '../../../node/agentConfigurationService.js';
 import { DshAgent, dshHarnessBridgeEntry, isDshHarnessInstalled, resolveDshHarnessRoot } from '../../../node/dsh/dshAgent.js';
 
 // The DSH provider registers by default, so a build (or dev checkout) with a
@@ -43,7 +44,8 @@ suite('dshAgent', () => {
 	function makeAgent(harnessRoot: string): DshAgent {
 		process.env[AgentHostDshHarnessRootEnvVar] = harnessRoot;
 		const environmentService = { appRoot: join(tempDir, 'unused-app-root') } as INativeEnvironmentService;
-		return store.add(new DshAgent(new NullLogService(), environmentService));
+		const configurationService = { getRootValue: () => undefined } as unknown as IAgentConfigurationService;
+		return store.add(new DshAgent(new NullLogService(), environmentService, configurationService));
 	}
 
 	test('resolveDshHarnessRoot prefers the env override over the app root', () => {

@@ -26,6 +26,8 @@ export interface IDshInitializeResult {
 	readonly protocol: { readonly name: string; readonly version: number };
 	readonly runtime: { readonly name: string; readonly pin: string };
 	readonly providers: readonly { readonly id: string; readonly name: string }[];
+	/** Ids of the session presets the bridge's composition defines (may be absent on older bridges). */
+	readonly presets?: readonly string[];
 }
 
 export interface IDshSessionCreateParams {
@@ -33,6 +35,8 @@ export interface IDshSessionCreateParams {
 	readonly cwd?: string;
 	readonly provider?: string;
 	readonly model?: string;
+	/** Session preset id (a DEV-AI Suite profile); must be one of the bridge's advertised presets. */
+	readonly preset?: string;
 }
 
 export interface IDshSessionCreateResult {
@@ -45,6 +49,8 @@ export interface IDshSessionListEntry {
 	readonly createdAt: number;
 	readonly cwd?: string;
 	readonly parentSession?: string;
+	/** The preset the session was created with, when any. */
+	readonly preset?: string;
 	/** Whether the session is currently live in the runtime's agent registry. */
 	readonly live: boolean;
 }
