@@ -27,10 +27,17 @@ suite('WorkbenchThemeService', () => {
 			);
 		});
 
+		test('migrates the previous default dark theme to the product default', () => {
+			assert.deepStrictEqual(
+				['Dark 2026'].map(migrateThemeSettingsId),
+				[ThemeSettingDefaults.COLOR_THEME_DARK]
+			);
+		});
+
 		test('returns unknown IDs unchanged', () => {
 			assert.deepStrictEqual(
-				['Dark Modern', 'Dark 2026', 'Some Custom Theme', ''].map(migrateThemeSettingsId),
-				['Dark Modern', 'Dark 2026', 'Some Custom Theme', '']
+				['Dark Modern', 'Monokai', 'Some Custom Theme', ''].map(migrateThemeSettingsId),
+				['Dark Modern', 'Monokai', 'Some Custom Theme', '']
 			);
 		});
 	});
