@@ -61,13 +61,37 @@ home under `devai-harness/.tmp-test-home/` (gitignored) and exits 0 only if
 the unmodified fixture plugin activates and its tool answers through the
 harness pipeline.
 
+## Packaging (Linux)
+
+The Linux desktop packaging stages this component into the built app at
+`resources/app/devai-harness` — exactly where `DshAgent` resolves it when
+`VSCODE_AGENT_HOST_DSH_HARNESS_ROOT` is unset. Staging
+(`build/lib/devaiHarness.ts`, called by `build/gulpfile.vscode.ts` for
+`platform === 'linux'`) copies the shipped files (`package.json`,
+`package-lock.json`, `README.md`, `bridge/`, `bundle/`, `src/`; never `test/`
+or the throwaway homes) and runs a production, lockfile-exact, scripts-off
+`npm ci --omit=dev` with `--os/--cpu` set for the target arch, so cross-arch
+builds get the target's prebuilt native addons. The `file:` workspace links
+(`devai-bridge`, `devai-harness-bundle`) are dereferenced into real
+directories. All Linux formats (deb/rpm/snap/appimage,
+`build/gulpfile.vscode.linux.ts`) copy the whole binary dir, so no per-format
+file list mentions the component; the rpm spec additionally excludes bundled
+`.node` addons from package provides. `npm run devai-harness-check` validates
+this wiring statically (staged layout, spawn-path cross-check, exact pins).
+
+Known limitation: for `armhf` the pinned runtime publishes no `linux-arm`
+prebuilt native helpers (loader addon, sandbox helpers, sharp/koffi), so the
+staging install succeeds but those optional natives are absent; x64 and
+arm64 ship complete.
+
 ## Notes
 
 - This component stays outside the VS Code build graph; the IDE reaches it
   through the `DshAgent` provider (`src/vs/platform/agentHost/node/dsh/`),
   which spawns `src/bridge-main.ts` as a child process and speaks bridge
   protocol v0 (`bridge/README.md`). The provider is gated behind
-  `chat.agentHost.dshAgent.enabled` (default off).
+  `chat.agentHost.dshAgent.enabled` (default on; the provider registers only
+  when the component is present).
 - Third-party notices for the pinned runtime live in the repository's
   `ThirdPartyNotices.txt`; component registrations in `cgmanifest.json`.
 - Node engine range and the profile/patch semantics follow the pinned dsh

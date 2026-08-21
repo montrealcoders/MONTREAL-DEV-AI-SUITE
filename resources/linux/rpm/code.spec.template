@@ -12,7 +12,10 @@ Requires: @@DEPENDENCIES@@
 Recommends: @@RECOMMENDS@@
 AutoReq:  0
 
-%global __provides_exclude_from ^%{_datadir}/%{name}/.*\\.so.*$
+# Bundled shared objects and Node native addons (including the embedded
+# DSH harness's prebuilt .node addons under resources/app/devai-harness)
+# are private to the app: never advertise them as package provides.
+%global __provides_exclude_from ^%{_datadir}/%{name}/.*\\.(so|node).*$
 # Disable elf stripping, refer https://github.com/microsoft/vscode/issues/223455#issuecomment-2610001754
 %global __brp_strip %{nil}
 %global __brp_strip_comment_note %{nil}
