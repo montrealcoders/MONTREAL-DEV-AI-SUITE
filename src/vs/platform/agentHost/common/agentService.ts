@@ -75,6 +75,15 @@ export const AgentHostClaudeAgentEnabledSettingId = 'chat.agentHost.claudeAgent.
 export const AgentHostCodexAgentEnabledSettingId = 'chat.agentHost.codexAgent.enabled';
 
 /**
+ * Configuration key controlling whether the DSH provider (the embedded
+ * DEV-AI Harness runtime, bridged from `devai-harness/`) is registered in
+ * the agent host process. When `false` (the default), the agent host skips
+ * registering the DSH provider. The agent host process must be restarted
+ * for changes to take effect.
+ */
+export const AgentHostDshAgentEnabledSettingId = 'chat.agentHost.dshAgent.enabled';
+
+/**
  * Configuration key controlling whether the agent host *wires up* the BYOK
  * ("bring your own key") language-model bridge: the renderer LM handler, the
  * reverse-RPC channel, and the per-connection link to the node-side OpenAI
@@ -112,6 +121,22 @@ export const AgentHostClaudeAgentEnabledEnvVar = 'VSCODE_AGENT_HOST_CLAUDE_AGENT
  * `'false'`; absent means "default" (`false`).
  */
 export const AgentHostCodexAgentEnabledEnvVar = 'VSCODE_AGENT_HOST_CODEX_AGENT_ENABLED';
+
+/**
+ * Environment variable form of {@link AgentHostDshAgentEnabledSettingId}.
+ * Set by the agent host starters from the setting. Accepts `'true'` /
+ * `'false'`; absent means "default" (`false`).
+ */
+export const AgentHostDshAgentEnabledEnvVar = 'VSCODE_AGENT_HOST_DSH_AGENT_ENABLED';
+
+/**
+ * Optional override pointing at the DEV-AI Harness component root — the
+ * directory holding `devai-harness/package.json` and `src/bridge-main.ts`.
+ * When unset, the agent host falls back to `<appRoot>/devai-harness`, which
+ * is where the component lives when running from sources. Mirrors the
+ * Claude/Codex SDK-root override pattern.
+ */
+export const AgentHostDshHarnessRootEnvVar = 'VSCODE_AGENT_HOST_DSH_HARNESS_ROOT';
 
 /**
  * Environment variable form of {@link AgentHostByokModelsEnabledSettingId}.
@@ -540,6 +565,7 @@ export interface IAgentSdkStarterSettings {
 	readonly codexBinaryArgs?: readonly string[];
 	readonly claudeAgentEnabled?: boolean;
 	readonly codexAgentEnabled?: boolean;
+	readonly dshAgentEnabled?: boolean;
 	readonly byokModelsEnabled?: boolean;
 }
 
@@ -564,6 +590,9 @@ export function buildAgentSdkEnv(
 	}
 	if (settings.codexAgentEnabled !== undefined) {
 		setIfMissing(AgentHostCodexAgentEnabledEnvVar, settings.codexAgentEnabled ? 'true' : 'false');
+	}
+	if (settings.dshAgentEnabled !== undefined) {
+		setIfMissing(AgentHostDshAgentEnabledEnvVar, settings.dshAgentEnabled ? 'true' : 'false');
 	}
 	if (settings.byokModelsEnabled !== undefined) {
 		setIfMissing(AgentHostByokModelsEnabledEnvVar, settings.byokModelsEnabled ? 'true' : 'false');
@@ -753,6 +782,9 @@ export const CLAUDE_AGENT_PROVIDER_ID = 'claude' as const;
 
 /** Well-known agent provider id for the Codex agent-host backend. */
 export const CODEX_AGENT_PROVIDER_ID = 'codex' as const;
+
+/** Well-known agent provider id for the DSH (embedded DEV-AI Harness) backend. */
+export const DSH_AGENT_PROVIDER_ID = 'dsh' as const;
 
 /**
  * Static capability facts an agent backend advertises about itself. Each flag
