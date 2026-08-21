@@ -42,8 +42,8 @@ The `devai` profile stacks:
 
 Third-party plugins enter by the dsh ecosystem's canonical flow: install the
 npm package into the profile directory, then add its entry in the profile's
-`cordis.patch.yml` (or an overlay). Plugins written against DeepSeek Harness
-v0.1.1-rc.2 load as-is; compatibility with other versions is not promised —
+`cordis.patch.yml` (or an overlay). Plugins written against
+DeepSeek Harness v0.1.1-rc.2 load as-is; compatibility with other versions is not promised —
 upstream is a developer preview with announced breaking changes, so the pin
 only moves together with a green acceptance run.
 
