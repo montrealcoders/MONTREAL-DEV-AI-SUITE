@@ -63,8 +63,11 @@ harness pipeline.
 
 ## Notes
 
-- This component is deliberately outside the VS Code build graph in Phase 1;
-  the IDE-facing bridge (Agent Host integration) is a later phase.
+- This component stays outside the VS Code build graph; the IDE reaches it
+  through the `DshAgent` provider (`src/vs/platform/agentHost/node/dsh/`),
+  which spawns `src/bridge-main.ts` as a child process and speaks bridge
+  protocol v0 (`bridge/README.md`). The provider is gated behind
+  `chat.agentHost.dshAgent.enabled` (default off).
 - Third-party notices for the pinned runtime live in the repository's
   `ThirdPartyNotices.txt`; component registrations in `cgmanifest.json`.
 - Node engine range and the profile/patch semantics follow the pinned dsh
