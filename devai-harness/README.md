@@ -14,9 +14,13 @@ DeepSeek Harness v0.1.1-rc.2 plugins.
 |---|---|
 | `package.json` | Exact-pinned dsh runtime dependencies (`@deepseek-ai/dsh-base` 0.1.1-rc.2 and friends) — the "dsh installation" bundle resolution anchors on |
 | `bundle/` | `devai-harness-bundle`: the DEV-AI Suite product overrides as a dsh bundle layer (`dsh.bundle.patch` → `cordis.patch.yml`), stacked over `@deepseek-ai/dsh-base` |
+| `bridge/` | `devai-bridge`: the IDE-facing dsh plugin serving bridge protocol v0 (JSON-RPC/NDJSON on stdio) — session create/list/resume/prompt, streamed `session/event`s, approval passthrough. Protocol reference in `bridge/README.md` |
 | `src/boot.ts` | Embedded boot: auto-initializes the `devai` profile under the harness home (`$DSH_HOME`, else `~/.dsh`), composes bundle layers + the profile's own `cordis.patch.yml` + caller overlays, and boots via `@deepseek-ai/dsh-app-boot` |
+| `src/bridge-main.ts` | Bridge-mode entry: boots the profile with `devai-bridge` inserted through the overlay patch slot and serves the protocol until shutdown/EOF/signal — what the IDE's Agent Host spawns |
 | `test/fixtures/dsh-plugin-greeter/` | Third-party-style dsh tool plugin (npm package shape prescribed by the dsh cordis tutorial), used as the compatibility fixture |
+| `test/fixtures/dsh-plugin-approval-probe/` | Third-party-style plugin whose tool is gated `ask` on the approval seam, used by the bridge contract test |
 | `test/plugin-load.test.ts` | Acceptance test: packs and installs the fixture into the `devai` profile through the package-manager flow, boots the runtime, and executes the plugin's tool through `ctx.tools` |
+| `test/bridge-protocol.test.ts` | Bridge contract test: spawns the bridge-mode boot, drives protocol v0 over stdio against a loopback mock model endpoint, and asserts streaming, approval passthrough, list/close/resume, and clean shutdown |
 
 ## The devai profile
 
