@@ -169,8 +169,8 @@ configurationRegistry.registerConfiguration({
 		},
 		[AgentHostDshAgentEnabledSettingId]: {
 			type: 'boolean',
-			description: nls.localize('chat.agentHost.dshAgent.enabled', "When enabled, the agent host registers the DSH provider — sessions running on the embedded DEV-AI Harness runtime, compatible with DeepSeek Harness v0.1.1-rc.2 plugins. Requires `#chat.agentHost.enabled#`. The agent host process must be restarted for changes to take effect."),
-			default: false,
+			description: nls.localize('chat.agentHost.dshAgent.enabled', "When enabled, the agent host registers the DSH provider — sessions running on the embedded DEV-AI Harness runtime, compatible with DeepSeek Harness v0.1.1-rc.2 plugins. Enabled by default; the provider only appears when the harness component ships with this build. Requires `#chat.agentHost.enabled#`. The agent host process must be restarted for changes to take effect."),
+			default: true,
 			tags: ['experimental', 'advanced'],
 		},
 		[AgentHostOTelEnabledSettingId]: {

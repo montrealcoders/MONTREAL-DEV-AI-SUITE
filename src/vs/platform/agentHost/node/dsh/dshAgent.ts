@@ -35,6 +35,35 @@ import { createDshSessionMapState, mapDshSessionEvent, replayDshEventsToTurns, t
 // sessions materialized on first send, child-process JSON-RPC client), so
 // the two backends stay reviewable side by side.
 
+/**
+ * Resolve the DEV-AI Harness component root: the `VSCODE_AGENT_HOST_DSH_HARNESS_ROOT`
+ * env override wins, else the component shipped inside the application root
+ * (dev: `<repo>/devai-harness`; built products: `resources/app/devai-harness`,
+ * staged by the packaging pipeline).
+ */
+export function resolveDshHarnessRoot(env: NodeJS.ProcessEnv, appRoot: string): string {
+	const override = env[AgentHostDshHarnessRootEnvVar];
+	if (override) {
+		return override;
+	}
+	return join(appRoot, 'devai-harness');
+}
+
+/** The bridge-mode boot entry {@link DshAgent} spawns inside a harness root. */
+export function dshHarnessBridgeEntry(harnessRoot: string): string {
+	return join(harnessRoot, 'src', 'bridge-main.ts');
+}
+
+/**
+ * Whether the harness component is present (its bridge entry exists) for the
+ * given environment. The registration sites use this so a build without the
+ * component (or a broken override) degrades to "agent absent" instead of
+ * registering a provider whose every session would fail.
+ */
+export function isDshHarnessInstalled(env: NodeJS.ProcessEnv, appRoot: string): boolean {
+	return fs.existsSync(dshHarnessBridgeEntry(resolveDshHarnessRoot(env, appRoot)));
+}
+
 interface IDshSession {
 	readonly sessionId: string;
 	readonly sessionUri: URI;
@@ -84,13 +113,9 @@ export class DshAgent extends Disposable implements IAgent {
 
 	// #region Connection
 
-	/** Resolve the DEV-AI Harness component root (env override, else in-repo). */
+	/** Resolve the DEV-AI Harness component root (env override, else in-app). */
 	private _resolveHarnessRoot(): string {
-		const override = process.env[AgentHostDshHarnessRootEnvVar];
-		if (override) {
-			return override;
-		}
-		return join(this._environmentService.appRoot, 'devai-harness');
+		return resolveDshHarnessRoot(process.env, this._environmentService.appRoot);
 	}
 
 	private _ensureConnection(): Promise<IConnectionReady> {
@@ -113,7 +138,7 @@ export class DshAgent extends Disposable implements IAgent {
 
 	private async _startConnection(): Promise<IConnectionReady> {
 		const root = this._resolveHarnessRoot();
-		const entry = join(root, 'src', 'bridge-main.ts');
+		const entry = dshHarnessBridgeEntry(root);
 		if (!fs.existsSync(entry)) {
 			throw new Error(`DSH harness root not found: ${entry} (set ${AgentHostDshHarnessRootEnvVar} to the devai-harness component directory)`);
 		}

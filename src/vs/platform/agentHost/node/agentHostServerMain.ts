@@ -45,7 +45,7 @@ import { ClaudeAgent } from './claude/claudeAgent.js';
 import { ClaudeAgentSdkService, ClaudeSdkPackage, IClaudeAgentSdkService } from './claude/claudeAgentSdkService.js';
 import { ClaudeProxyService, IClaudeProxyService } from './claude/claudeProxyService.js';
 import { CodexAgent, CodexSdkPackage } from './codex/codexAgent.js';
-import { DshAgent } from './dsh/dshAgent.js';
+import { DshAgent, isDshHarnessInstalled, resolveDshHarnessRoot } from './dsh/dshAgent.js';
 import { CodexProxyService, ICodexProxyService } from './codex/codexProxyService.js';
 import { AgentSdkDownloader, IAgentSdkDownloader, type IAgentSdkDownloadProgress } from './agentSdkDownloader.js';
 import { IAgentHostOTelService } from '../common/otel/agentHostOTelService.js';
@@ -331,13 +331,19 @@ async function main(): Promise<void> {
 			agentService.registerProvider(codexAgent);
 			log('CodexAgent registered');
 		}
-		// DSH is gated on its enable env var only (default off); the embedded
-		// harness component is not SDK-downloaded — a missing component fails
-		// loud at first use. See agentHostMain.ts for the same gate.
-		if (isAgentEnabled(process.env[AgentHostDshAgentEnabledEnvVar], false)) {
-			const dshAgent = disposables.add(instantiationService.createInstance(DshAgent));
-			agentService.registerProvider(dshAgent);
-			log('DshAgent registered');
+		// DSH is gated on its enable env var (default on) plus the embedded
+		// harness component being present; the component is not SDK-downloaded.
+		// A build without it (or a broken override) degrades to "agent absent"
+		// instead of registering a provider whose sessions cannot spawn. See
+		// agentHostMain.ts for the same gate.
+		if (isAgentEnabled(process.env[AgentHostDshAgentEnabledEnvVar], true)) {
+			if (isDshHarnessInstalled(process.env, environmentService.appRoot)) {
+				const dshAgent = disposables.add(instantiationService.createInstance(DshAgent));
+				agentService.registerProvider(dshAgent);
+				log('DshAgent registered');
+			} else {
+				log(`DshAgent not registered: harness component missing at ${resolveDshHarnessRoot(process.env, environmentService.appRoot)}`);
+			}
 		}
 	}
 
