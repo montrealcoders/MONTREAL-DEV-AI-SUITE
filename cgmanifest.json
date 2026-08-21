@@ -632,6 +632,93 @@
 		},
 		{
 			"component": {
+				"type": "npm",
+				"npm": {
+					"name": "@deepseek-ai/dsh-base",
+					"version": "0.1.1-rc.2"
+				}
+			},
+			"license": "MIT",
+			"repositoryUrl": "https://github.com/deepseek-ai/deepseek-harness"
+		},
+		{
+			"component": {
+				"type": "npm",
+				"npm": {
+					"name": "@deepseek-ai/dsh-app-boot",
+					"version": "0.1.1-rc.2"
+				}
+			},
+			"license": "MIT",
+			"repositoryUrl": "https://github.com/deepseek-ai/deepseek-harness"
+		},
+		{
+			"component": {
+				"type": "npm",
+				"npm": {
+					"name": "@deepseek-ai/dsh-tools",
+					"version": "0.1.1-rc.2"
+				}
+			},
+			"license": "MIT",
+			"repositoryUrl": "https://github.com/deepseek-ai/deepseek-harness"
+		},
+		{
+			"component": {
+				"type": "npm",
+				"npm": {
+					"name": "@deepseek-ai/dsh-llm",
+					"version": "0.1.1-rc.2"
+				}
+			},
+			"license": "MIT",
+			"repositoryUrl": "https://github.com/deepseek-ai/deepseek-harness"
+		},
+		{
+			"component": {
+				"type": "npm",
+				"npm": {
+					"name": "@deepseek-ai/dsh-home-paths",
+					"version": "0.1.1-rc.2"
+				}
+			},
+			"license": "MIT",
+			"repositoryUrl": "https://github.com/deepseek-ai/deepseek-harness"
+		},
+		{
+			"component": {
+				"type": "npm",
+				"npm": {
+					"name": "@deepseek-ai/cordis",
+					"version": "4.0.1"
+				}
+			},
+			"license": "MIT",
+			"repositoryUrl": "https://github.com/deepseek-ai/deepseek-harness"
+		},
+		{
+			"component": {
+				"type": "npm",
+				"npm": {
+					"name": "@deepseek-ai/cordis-plugin-loader",
+					"version": "1.0.2"
+				}
+			},
+			"license": "MIT",
+			"repositoryUrl": "https://github.com/deepseek-ai/deepseek-harness"
+		},
+		{
+			"component": {
+				"type": "npm",
+				"npm": {
+					"name": "node-addon-require-builtin",
+					"version": "0.1.5"
+				}
+			},
+			"license": "MIT"
+		},
+		{
+			"component": {
 				"type": "git",
 				"git": {
 					"name": "ripgrep",
