@@ -191,7 +191,9 @@ let splashWindow: BrowserWindow | undefined = undefined;
 
 function showSplashScreen(): void {
 	const isCLIMode = args['list-extensions'] || args['install-extension'] || args['uninstall-extension'];
-	if (isCLIMode) {
+	// Skip under the smoke-test driver: the runner binds to the first BrowserWindow,
+	// which would be the splash instead of the workbench.
+	if (isCLIMode || args['enable-smoke-test-driver']) {
 		return;
 	}
 

@@ -8,6 +8,7 @@ import { Disposable } from '../../../../base/common/lifecycle.js';
 import { IWorkbenchContribution, registerWorkbenchContribution2, WorkbenchPhase } from '../../../common/contributions.js';
 import { IInstantiationService, ServicesAccessor } from '../../../../platform/instantiation/common/instantiation.js';
 import { IProfileSelectionService } from '../../../services/profileSelection/common/profileSelectionService.js';
+import { IWorkbenchEnvironmentService } from '../../../services/environment/common/environmentService.js';
 import { ProfileSelectionScreen } from './profileSelectionScreen.js';
 import { Action2, registerAction2 } from '../../../../platform/actions/common/actions.js';
 import { localize2 } from '../../../../nls.js';
@@ -35,13 +36,18 @@ export class ProfileSelectionContribution extends Disposable implements IWorkben
 	constructor(
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
 		@IProfileSelectionService private readonly profileSelectionService: IProfileSelectionService,
+		@IWorkbenchEnvironmentService environmentService: IWorkbenchEnvironmentService,
 	) {
 		super();
 		// TODO: Integrate with the custom Walkthrough (#95444 - Jorge).
 		// Currently shows a temporary modal at IDE startup.
 		// When the walkthrough is ready, profile selection should be
 		// embedded in it and this modal should be removed.
-		this._showIfNoProfileSelected();
+		// Do not auto-show under the smoke-test driver: the full-screen
+		// modal would block all pointer input in automated runs.
+		if (!environmentService.enableSmokeTestDriver) {
+			this._showIfNoProfileSelected();
+		}
 	}
 
 	private _showIfNoProfileSelected(): void {
