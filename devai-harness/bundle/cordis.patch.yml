@@ -1,0 +1,18 @@
+# DEV-AI Suite product layer of the devai profile, applied over the
+# @deepseek-ai/dsh-base bundle patch. A patch targeting an id replaces that
+# row's whole config (no deep-merge), so overrides restate every field they
+# keep. The user's own profiles/devai/cordis.patch.yml is applied after this
+# layer and outranks it.
+
+# The embedded harness never reports telemetry: the DEV-AI Suite owns its own
+# privacy surface, and the runtime must not call out on its own.
+- id: session-telemetry-otel
+  disabled: true
+
+# Module-reload HMR watches the invocation directory recursively; inside the
+# product that directory is a user workspace of arbitrary size, and live
+# plugin reload is not part of the embedded boot. Profile-config watching is
+# a later, separately mounted concern (watch-only HMR), as in the dsh web
+# bundle, which also disables this row.
+- id: hmr
+  disabled: true

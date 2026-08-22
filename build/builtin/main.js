@@ -2,15 +2,21 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-// @ts-check
-
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const url = require('url');
 const path = require('path');
 
+/**
+ * @type {BrowserWindow | null}
+ */
 let window = null;
 
 ipcMain.handle('pickdir', async () => {
+
+	if (!window) {
+		return undefined;
+	}
+
 	const result = await dialog.showOpenDialog(window, {
 		title: 'Choose Folder',
 		properties: ['openDirectory']
@@ -24,6 +30,7 @@ ipcMain.handle('pickdir', async () => {
 });
 
 app.once('ready', () => {
+
 	window = new BrowserWindow({
 		width: 800,
 		height: 600,
@@ -33,10 +40,20 @@ app.once('ready', () => {
 			enableWebSQL: false
 		}
 	});
+
 	window.setMenuBarVisibility(false);
-	window.loadURL(url.format({ pathname: path.join(__dirname, 'index.html'), protocol: 'file:', slashes: true }));
-	// window.webContents.openDevTools();
-	window.once('closed', () => window = null);
+
+	window.loadURL(
+		url.format({
+			pathname: path.join(__dirname, 'index.html'),
+			protocol: 'file:',
+			slashes: true
+		})
+	);
+
+	window.once('closed', () => {
+		window = null;
+	});
 });
 
 app.on('window-all-closed', () => app.quit());

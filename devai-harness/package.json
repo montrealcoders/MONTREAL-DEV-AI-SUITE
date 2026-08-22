@@ -1,0 +1,29 @@
+{
+	"name": "devai-harness",
+	"description": "DEV-AI Harness (DSH): the embedded plugin-configurable harness runtime of the DEV-AI Suite, compatible with DeepSeek Harness v0.1.1-rc.2 plugins",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"engines": {
+		"node": "^22.19.0 || >=24"
+	},
+	"scripts": {
+		"test": "node test/plugin-load.test.ts && node test/bridge-protocol.test.ts",
+		"test:plugin-load": "node test/plugin-load.test.ts",
+		"test:bridge": "node test/bridge-protocol.test.ts"
+	},
+	"dependencies": {
+		"@deepseek-ai/cordis": "4.0.1",
+		"@deepseek-ai/cordis-plugin-loader": "1.0.2",
+		"@deepseek-ai/dsh-app-boot": "0.1.1-rc.2",
+		"@deepseek-ai/dsh-base": "0.1.1-rc.2",
+		"@deepseek-ai/dsh-home-paths": "0.1.1-rc.2",
+		"@deepseek-ai/dsh-llm": "0.1.1-rc.2",
+		"@deepseek-ai/dsh-sdk-protocol": "0.1.1-rc.2",
+		"@deepseek-ai/dsh-system-prompt": "0.1.1-rc.2",
+		"@deepseek-ai/dsh-tools": "0.1.1-rc.2",
+		"devai-bridge": "file:./bridge",
+		"devai-harness-bundle": "file:./bundle",
+		"node-addon-require-builtin": "0.1.5"
+	}
+}

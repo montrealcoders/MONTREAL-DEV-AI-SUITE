@@ -14,6 +14,12 @@
   "contributes": {
     "themes": [
       {
+          "id": "devai-dark",
+          "label": "DEV-AI Dark",
+          "uiTheme": "vs-dark",
+          "path": "./themes/devai-dark.json"
+      },
+      {
         "id": "Light 2026",
         "label": "%light2026ThemeLabel%",
         "uiTheme": "vs",

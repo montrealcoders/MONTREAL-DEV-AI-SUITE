@@ -15,17 +15,22 @@ if hash update-mime-database 2>/dev/null; then
 	update-mime-database /usr/share/mime
 fi
 
+# Update hicolor icon cache
+if hash gtk-update-icon-cache 2>/dev/null; then
+	gtk-update-icon-cache -f /usr/share/icons/hicolor
+fi
+
 RET=true
 if [ -e '/usr/share/debconf/confmodule' ]; then
 	. /usr/share/debconf/confmodule
-	db_get @@NAME@@/add-microsoft-repo || true
+	db_get @@NAME@@/add-devai-repo || true
 fi
 if [ "$RET" = "true" ]; then
 	eval $(apt-config shell APT_SOURCE_PARTS Dir::Etc::sourceparts/d)
-	CODE_SOURCE_PART=${APT_SOURCE_PARTS}vscode.sources
+	CODE_SOURCE_PART=${APT_SOURCE_PARTS}devai-suite.sources
 	rm -f $CODE_SOURCE_PART
 
-	CODE_TRUSTED_PART=/usr/share/keyrings/microsoft.gpg
+	CODE_TRUSTED_PART=/usr/share/keyrings/devai-suite.gpg
 	rm -f $CODE_TRUSTED_PART
 fi
 

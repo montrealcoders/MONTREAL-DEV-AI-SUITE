@@ -91,6 +91,7 @@ export interface IProductConfiguration {
 
 	readonly nameShort: string;
 	readonly nameLong: string;
+	readonly publisher?: string;
 
 	readonly win32AppUserModelId?: string;
 	readonly win32MutexName?: string;
@@ -244,6 +245,7 @@ export interface IProductConfiguration {
 	readonly 'editSessions.store'?: Omit<ConfigurationSyncStore, 'insidersUrl' | 'stableUrl'>;
 	readonly darwinUniversalAssetId?: string;
 	readonly darwinBundleIdentifier?: string;
+	readonly linuxIconName?: string;
 	readonly profileTemplatesUrl?: string;
 
 	readonly commonlyUsedSettings?: string[];

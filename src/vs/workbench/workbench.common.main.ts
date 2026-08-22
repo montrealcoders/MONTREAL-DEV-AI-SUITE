@@ -396,6 +396,10 @@ import './contrib/welcomeOnboarding/browser/welcomeOnboarding.contribution.js';
 // Onboarding (scenario engine)
 import './contrib/onboarding/browser/onboarding.contribution.js';
 
+// Welcome Profile Selection
+import './services/profileSelection/browser/profileSelectionService.js';
+import './contrib/welcomeProfileSelection/browser/profileSelection.contribution.js';
+
 // Call Hierarchy
 import './contrib/callHierarchy/browser/callHierarchy.contribution.js';
 

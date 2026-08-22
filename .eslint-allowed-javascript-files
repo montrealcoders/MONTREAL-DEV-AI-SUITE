@@ -16,6 +16,11 @@ build/builtin/browser-main.js
 build/builtin/main.js
 build/npm/stubs/sharp/index.js
 build/codex/generate-protocol.mjs
+# dsh plugin packages: an npm plugin artifact must be plain JavaScript (Node
+# does not type-strip inside node_modules, where the Loader resolves it). The
+# fixture additionally stays byte-for-byte in the ecosystem's prescribed shape.
+devai-harness/bridge/src/index.js
+devai-harness/test/fixtures/dsh-plugin-greeter/index.js
 eslint.config.js
 extensions/copilot/.mocha-multi-reporters.js
 extensions/copilot/.mocharc.js

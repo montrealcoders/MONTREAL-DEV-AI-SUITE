@@ -60,3 +60,7 @@
 # Vendored third-party libraries
 src/vs/base/common/lit-html/**
 src/vs/base/common/signals-core/**
+
+# Third-party-style dsh plugin fixture: kept byte-for-byte in the shape the
+# dsh ecosystem prescribes, so repo lint conventions do not apply to it
+devai-harness/test/fixtures/**

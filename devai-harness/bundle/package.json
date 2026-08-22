@@ -1,0 +1,12 @@
+{
+	"name": "devai-harness-bundle",
+	"description": "DEV-AI Suite product overrides as a dsh profile bundle layer, stacked over @deepseek-ai/dsh-base by the devai profile",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"dsh": {
+		"bundle": {
+			"patch": "./cordis.patch.yml"
+		}
+	}
+}

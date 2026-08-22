@@ -22,6 +22,7 @@ import * as crypto from 'crypto';
 import * as cp from 'child_process';
 import * as i18n from './lib/i18n.ts';
 import { getProductionDependencies } from './lib/dependencies.ts';
+import { stageDevaiHarness } from './lib/devaiHarness.ts';
 import { config } from './lib/electron.ts';
 import { createAsar } from './lib/asar.ts';
 import minimist from 'minimist';
@@ -469,7 +470,16 @@ function packageTask(platform: string, arch: string, sourceFolderName: string, d
 		} else if (platform === 'linux') {
 			const policyDest = gulp.src('.build/policies/linux/**', { base: '.build/policies/linux' })
 				.pipe(rename(f => f.dirname = `policies/${f.dirname}`));
-			all = es.merge(all, gulp.src('resources/linux/code.png', { base: '.' }), policyDest);
+			// The embedded DSH runtime (`devai-harness/`): staged as shipped
+			// component files + a production, lockfile-exact npm install for the
+			// target arch, landing at `resources/app/devai-harness` — the path
+			// the agent host's DSH provider spawns (dshAgent.ts). Every Linux
+			// package format copies the whole binary dir, so this single staging
+			// step covers deb/rpm/snap/appimage. `build/checkDevaiHarness.ts`
+			// cross-checks the staged layout against the agent's spawn path.
+			const devaiHarnessStagedRoot = stageDevaiHarness(root, { platform, arch });
+			const devaiHarness = gulp.src(devaiHarnessStagedRoot + '/**', { base: path.dirname(devaiHarnessStagedRoot), dot: true });
+			all = es.merge(all, gulp.src('resources/linux/code.png', { base: '.' }), policyDest, devaiHarness);
 		} else if (platform === 'darwin') {
 			const shortcut = gulp.src('resources/darwin/bin/code.sh')
 				.pipe(replace('@@APPNAME@@', product.applicationName))

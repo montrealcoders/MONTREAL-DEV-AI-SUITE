@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-title VSCode Dev
+title DEV-AI Suite
 
 pushd %~dp0\..
 

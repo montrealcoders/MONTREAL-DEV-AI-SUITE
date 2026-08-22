@@ -15,7 +15,7 @@ import { URI } from '../../../base/common/uri.js';
 import { generateUuid } from '../../../base/common/uuid.js';
 import * as os from 'os';
 import * as inspector from 'inspector';
-import { AgentHostByokModelsEnabledEnvVar, AgentHostClaudeAgentEnabledEnvVar, AgentHostCodexAgentEnabledEnvVar, AgentHostIpcChannels, IAgentHostInspectInfo, IAgentHostSocketInfo, IAgentService, IConnectionTrackerService, isAgentEnabled } from '../common/agentService.js';
+import { AgentHostByokModelsEnabledEnvVar, AgentHostClaudeAgentEnabledEnvVar, AgentHostCodexAgentEnabledEnvVar, AgentHostDshAgentEnabledEnvVar, AgentHostIpcChannels, IAgentHostInspectInfo, IAgentHostSocketInfo, IAgentService, IConnectionTrackerService, isAgentEnabled } from '../common/agentService.js';
 import { AgentHostCodexEnabledConfigKey, platformRootSchema } from '../common/agentHostSchema.js';
 import { AgentService } from './agentService.js';
 import { IAgentHostStateManager } from './agentHostStateManager.js';
@@ -30,6 +30,7 @@ import { ClaudeAgent } from './claude/claudeAgent.js';
 import { ClaudeAgentSdkService, ClaudeSdkPackage, IClaudeAgentSdkService } from './claude/claudeAgentSdkService.js';
 import { ClaudeProxyService, IClaudeProxyService } from './claude/claudeProxyService.js';
 import { CodexAgent, CodexSdkPackage } from './codex/codexAgent.js';
+import { DshAgent, isDshHarnessInstalled, resolveDshHarnessRoot } from './dsh/dshAgent.js';
 import { CodexProxyService, ICodexProxyService } from './codex/codexProxyService.js';
 import { ByokLmProxyService, IByokLmProxyService } from './copilot/byokLmProxyService.js';
 import { ByokLmBridgeRegistry, IByokLmBridgeRegistry } from './byokLmBridgeRegistry.js';
@@ -264,6 +265,22 @@ async function startAgentHost(): Promise<void> {
 			};
 			registerCodexIfEnabled();
 			disposables.add(agentConfigurationService.onDidRootConfigChange(() => registerCodexIfEnabled()));
+		}
+		// The DSH provider is gated on two things:
+		//  1. The user-facing enable toggle (`chat.agentHost.dshAgent.enabled`,
+		//     forwarded as an env var by the starters; default on).
+		//  2. The embedded harness component being present. No SDK download is
+		//     involved: the component ships with the product (dev:
+		//     `<appRoot>/devai-harness`, built: `resources/app/devai-harness`,
+		//     overridable via VSCODE_AGENT_HOST_DSH_HARNESS_ROOT). A build
+		//     without it (or a broken override) degrades to "agent absent"
+		//     instead of registering a provider whose sessions cannot spawn.
+		if (isAgentEnabled(process.env[AgentHostDshAgentEnabledEnvVar], true)) {
+			if (isDshHarnessInstalled(process.env, environmentService.appRoot)) {
+				agentService.registerProvider(instantiationService.createInstance(DshAgent));
+			} else {
+				logService.info(`DshAgent not registered: harness component missing at ${resolveDshHarnessRoot(process.env, environmentService.appRoot)}`);
+			}
 		}
 	} catch (err) {
 		logService.error('Failed to create AgentService', err);

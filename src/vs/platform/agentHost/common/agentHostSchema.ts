@@ -402,6 +402,15 @@ export const AgentHostSessionSyncEnabledConfigKey = 'sessionSyncEnabled';
 export const AgentHostCodexEnabledConfigKey = 'codexAgentEnabled';
 
 /**
+ * Root config key forwarded from the renderer carrying the DEV-AI Suite
+ * startup profile the user selected (application-scoped storage key
+ * `devai.selectedProfile`). The DSH provider maps it onto a session preset
+ * (see `dshSessionPresets.ts`) when creating harness sessions; unknown or
+ * empty values mean "no preset".
+ */
+export const AgentHostDshSelectedProfileConfigKey = 'dshSelectedProfile';
+
+/**
  * Root config key forwarded from the renderer when VS Code's
  * `chat.tools.terminal.enableAutoApprove` setting changes. Controls whether
  * agent-host shell permission checks may apply terminal auto-approve rules.
@@ -673,6 +682,12 @@ export const platformRootSchema = createSchema({
 		title: localize('agentHost.config.codexAgentEnabled.title', "Codex Agent"),
 		description: localize('agentHost.config.codexAgentEnabled.description', "Whether the Codex provider is enabled."),
 		default: false,
+	}),
+	[AgentHostDshSelectedProfileConfigKey]: schemaProperty<string>({
+		type: 'string',
+		title: localize('agentHost.config.dshSelectedProfile.title', "DSH Selected Profile"),
+		description: localize('agentHost.config.dshSelectedProfile.description', "The DEV-AI Suite startup profile selected in the connected client. DSH sessions default to the matching preset; empty or unknown values select no preset."),
+		default: '',
 	}),
 	[AgentHostTerminalAutoApproveEnabledConfigKey]: schemaProperty<boolean>({
 		type: 'boolean',
